@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: elasticsearch-credentials
+  namespace: '{{ .Values.elasticsearch.namespace }}'
+type: Opaque
+data:
+  username: '{{ .Values.elasticsearch.auth.username | b64enc }}'
+  password: '{{ .Values.elasticsearch.auth.password | b64enc }}'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: '{{ .Values.elasticsearch.nameOverride }}'
+  namespace: '{{ .Values.elasticsearch.namespace }}'
+  labels:
+    app: '{{ .Values.elasticsearch.nameOverride }}'
+spec:
+  serviceName: '{{ .Values.elasticsearch.nameOverride }}'
+  replicas: {{ .Values.elasticsearch.replicas }}
+  selector:
+    matchLabels:
+      app: '{{ .Values.elasticsearch.nameOverride }}'
+  template:
+    metadata:
+      namespace: '{{ .Values.elasticsearch.namespace }}'
+      labels:
+        app: '{{ .Values.elasticsearch.nameOverride }}'
+    spec:
+      containers:
+        - name: '{{ .Values.elasticsearch.nameOverride }}'
+          image: '{{ .Values.elasticsearch.image }}:{{ .Values.elasticsearch.imageTag }}'
+          resources:
+            requests:
+              cpu: '{{ .Values.elasticsearch.resources.requests.cpu }}'
+              memory: '{{ .Values.elasticsearch.resources.requests.memory }}'
+            limits:
+              cpu: '{{ .Values.elasticsearch.resources.limits.cpu }}'
+              memory: '{{ .Values.elasticsearch.resources.limits.memory }}'
+          env:
+            - name: xpack.security.enabled
+              value: "true"
+            - name: discovery.type
+              value: single-node
+            # This is _NOT_ actually setting the username
+            # It will always be "elastic" regardless of values
+            # so make sure values is using the "elastic" username
+            - name: ELASTIC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: password
+          ports:
+            - containerPort: 9200
+              name: rest
+            - containerPort: 9300
+              name: inter-node
+          volumeMounts:
+            - name: elasticsearch-data
+              mountPath: /usr/share/elasticsearch/data
+  {{- if not .Values.is_cloud }}
+      volumes:
+        - name: elasticsearch-data
+          emptyDir: {}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        storageClassName: '{{ .Values.elasticsearch.volumeClaimTemplate.storageClassName }}'
+        accessModes:
+          {{ .Values.elasticsearch.volumeClaimTemplate.accessModes }}
+        resources:
+          requests:
+            storage: '{{ .Values.elasticsearch.volumeClaimTemplate.resources.requests.storage }}'
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: '{{ .Values.elasticsearch.nameOverride }}'
+  namespace: '{{ .Values.elasticsearch.namespace }}'
+  labels:
+    app: '{{ .Values.elasticsearch.nameOverride }}'
+spec:
+  selector:
+    app: '{{ .Values.elasticsearch.nameOverride }}'
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+    - name: transport
+      port: 9300
+      targetPort: 9300
+  type: ClusterIP

@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-deployment
+  namespace: preview-core
+  labels:
+    app.kubernetes.io/name: front
+spec:
+  replicas: {{ .Values.front.replicas | default 0 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: front
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: front
+      annotations:
+        co.elastic.logs/json.keys_under_root: 'true'
+        co.elastic.logs/json.add_error_key: 'true'
+        co.elastic.logs/json.message_key: message
+    spec:
+      containers:
+        - name: front
+          image: '{{ .Values.front.image.url }}/{{ .Values.front.image.name }}:{{ .Values.front.image.tag }}'
+          imagePullPolicy: '{{ .Values.front.pullPolicy }}'
+      tolerations:
+        - key: 'preview.ergomake.dev/domain'
+          operator: 'Equal'
+          value: 'core'
+          effect: 'NoSchedule'

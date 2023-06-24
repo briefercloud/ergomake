@@ -1,0 +1,41 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: ergomake
+          POSTGRES_PASSWORD: ergomake
+          POSTGRES_DB: ergomake
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: stable
+
+      - run: make migrate
+        env:
+          DATABASE_URL: postgresql://ergomake:ergomake@localhost:5432/ergomake?sslmode=disable
+
+      - run: make test
+        env:
+          DATABASE_URL: postgresql://ergomake:ergomake@localhost:5432/ergomake?sslmode=disable

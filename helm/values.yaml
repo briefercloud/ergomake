@@ -1,0 +1,91 @@
+log_level: trace
+is_cloud: false
+cluster: minikube
+cluster_domain: env.ergomake.link
+ecr_userland_repo: '625414204186.dkr.ecr.us-east-1.amazonaws.com/ergomake-userland'
+
+github:
+  app_id: 'DUMMY'
+  client_id: 'DUMMY'
+  client_secret: 'DUMMY'
+  webhook_secret: 'DUMMY'
+  marketplace_webhook_secret: 'DUMMY'
+  private_key: 'DUMMY'
+
+elasticsearch:
+  nameOverride: elasticsearch-user-logs
+  namespace: preview-core
+  replicas: 1
+  image: 'docker.elastic.co/elasticsearch/elasticsearch'
+  imageTag: '8.6.2'
+  volumeClaimTemplate:
+    # This is unused on minikube as we mount an emptydir
+    storageClassName: 'csi-hostpath-sc'
+    accessModes: ['ReadWriteOnce']
+    resources:
+      requests:
+        storage: 30Gi
+  resources:
+    requests:
+      cpu: '100m'
+      memory: '4Gi'
+    limits:
+      cpu: '500m'
+      memory: '4Gi'
+  auth:
+    username: elastic
+    password: dummy_pass
+
+postgres:
+  nameOverride: postgres
+  namespace: preview-core
+  replicas: 1
+  image: postgres
+  imageTag: '15.2'
+  volumeClaimTemplate:
+    # This is unused on minikube as we mount an emptydir
+    storageClassName: 'csi-hostpath-sc'
+    accessModes: ['ReadWriteOnce']
+    resources:
+      requests:
+        storage: 30Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 512Mi
+  auth:
+    username: ergomake
+    password: ergomake
+
+ergomake:
+  replicas: 0
+  kaniko_memory: 15
+  image:
+    url: 625414204186.dkr.ecr.us-east-1.amazonaws.com/ergomake-core
+    name: ergomake
+    pullPolicy: IfNotPresent
+    tag: 'latest'
+  elasticsearch:
+    url: http://elasticsearch-user-logs:9200
+  auth:
+    jwt_secret: dummy_jwt_secret
+    redirect_url: http://api.ergomake.test/v2/auth/callback
+  env_vars_secret: 0000000000000000000000000000000000000000000000000000000000000000
+  priv_registries_secret: 0000000000000000000000000000000000000000000000000000000000000000
+  stripe:
+    standard_plan: prod_O0000000000001
+    professional_plan: prod_O0000000000002
+    secret_key: sk_test_000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    webhook_secret: whsec_0000000000000000000000000000000000000000000000000000000000000000
+
+front:
+  replicas: 1
+  image:
+    url: 625414204186.dkr.ecr.us-east-1.amazonaws.com/ergomake-core
+    name: front
+    pullPolicy: IfNotPresent
+    tag: 'v1'
+  address: "app.ergomake.dev"

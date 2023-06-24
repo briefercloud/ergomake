@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-credentials
+  namespace: '{{ .Values.postgres.namespace }}'
+type: Opaque
+data:
+  username: '{{ .Values.postgres.auth.username | b64enc }}'
+  password: '{{ .Values.postgres.auth.password | b64enc }}'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: '{{ .Values.postgres.nameOverride }}'
+  namespace: '{{ .Values.postgres.namespace }}'
+  labels:
+    app: '{{ .Values.postgres.nameOverride }}'
+spec:
+  serviceName: '{{ .Values.postgres.nameOverride }}'
+  replicas: {{ .Values.postgres.replicas }}
+  selector:
+    matchLabels:
+      app: '{{ .Values.postgres.nameOverride }}'
+  template:
+    metadata:
+      namespace: '{{ .Values.postgres.namespace }}'
+      labels:
+        app: '{{ .Values.postgres.nameOverride }}'
+    spec:
+      containers:
+        - name: '{{ .Values.postgres.nameOverride }}'
+          image: '{{ .Values.postgres.image }}:{{ .Values.postgres.imageTag }}'
+          {{- if .Values.is_cloud }}
+          command: ["bash", "-c"]
+          args: ["usermod -u $(stat -c '%u' '/var/lib/postgresql/data')  postgres && \
+                  groupmod -g $(stat -c '%u' '/var/lib/postgresql/data')  postgres && \
+                  chown -R postgres:postgres /var/lib/postgresql/data && \
+                  /usr/local/bin/docker-entrypoint.sh postgres"]
+          {{- end }}
+          resources:
+            requests:
+              cpu: '{{ .Values.postgres.resources.requests.cpu }}'
+              memory: '{{ .Values.postgres.resources.requests.memory }}'
+            limits:
+              cpu: '{{ .Values.postgres.resources.limits.cpu }}'
+              memory: '{{ .Values.postgres.resources.limits.memory }}'
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+  {{- if not .Values.is_cloud }}
+      volumes:
+        - name: postgres-data
+          emptyDir: {}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        storageClassName: '{{ .Values.postgres.volumeClaimTemplate.storageClassName }}'
+        accessModes:
+          {{ .Values.postgres.volumeClaimTemplate.accessModes }}
+        resources:
+          requests:
+            storage: '{{ .Values.postgres.volumeClaimTemplate.resources.requests.storage }}'
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: '{{ .Values.postgres.nameOverride }}'
+  namespace: '{{ .Values.postgres.namespace }}'
+  labels:
+    app: '{{ .Values.postgres.nameOverride }}'
+spec:
+  selector:
+    app: '{{ .Values.postgres.nameOverride }}'
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

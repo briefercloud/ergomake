@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ergomake-deployment
+  namespace: preview-core
+  labels:
+    app: ergomake
+spec:
+  replicas: {{ .Values.ergomake.replicas | default 0 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ergomake
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ergomake
+      annotations:
+        co.elastic.logs/json.keys_under_root: 'true'
+        co.elastic.logs/json.add_error_key: 'true'
+        co.elastic.logs/json.message_key: message
+    spec:
+      containers:
+        - name: ergomake
+          image: '{{ .Values.ergomake.image.url }}/{{ .Values.ergomake.image.name }}:{{ .Values.ergomake.image.tag }}'
+          resources:
+            requests:
+              ephemeral-storage: "5Gi"
+          env:
+            - name: GIN_MODE
+              value: release
+            - name: CLUSTER
+              value: '{{ .Values.cluster }}'
+            - name: CLUSTER_DOMAIN
+              value: '{{ .Values.cluster_domain }}'
+            - name: ECR_USERLAND_REPO
+              value: '{{ .Values.ecr_userland_repo }}'
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: POSTGRES_ADDRESS
+              value: '{{ .Values.postgres.nameOverride }}'
+            - name: POSTGRES_PORT
+              value: '5432'
+            - name: DATABASE_URL
+              value: 'postgresql://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@$(POSTGRES_ADDRESS):$(POSTGRES_PORT)/ergomake'
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: github-app-secrets
+                  key: github-webhook-secret
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: github-app-secrets
+                  key: github-app-id
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: github-app-secrets
+                  key: github-client-id
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: github-app-secrets
+                  key: github-client-secret
+            - name: GITHUB_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: github-app-secrets
+                  key: github-private-key
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ergomake-secrets
+                  key: jwt-secret
+            - name: AUTH_REDIRECT_URL
+              value: '{{ .Values.ergomake.auth.redirect_url }}'
+            - name: ELASTIC_SEARCH_URL
+              value: '{{ .Values.ergomake.elasticsearch.url }}'
+            - name: ELASTIC_SEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: username
+            - name: ELASTIC_SEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: password
+            - name: ALLOW_ORIGIN
+              value: 'https://{{ .Values.front.address }}'
+            - name: FRONTEND_URL
+              value: 'https://{{ .Values.front.address }}'
+            - name: ENV_VARS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ergomake-secrets
+                  key: env-vars-secret
+            - name: PRIV_REGISTRIES_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ergomake-secrets
+                  key: priv-registries-secret
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ergomake-secrets
+                  key: stripe-secret-key
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ergomake-secrets
+                  key: stripe-webhook-secret
+            - name: STRIPE_STANDARD_PLAN_PRODUCT_ID
+              value: '{{ .Values.ergomake.stripe.standard_plan }}'
+            - name: STRIPE_PROFESSIONAL_PLAN_PRODUCT_ID
+              value: '{{ .Values.ergomake.stripe.professional_plan }}'
+            - name: ENVIRONMENTS_LIMIT
+              value: '3'
+            - name: INGRESS_NAMESPACE
+              value: 'kube-system'
+            - name: INGRESS_SERVICE_NAME
+              value: 'ingress-nginx-controller'
+            - name: FRIENDS
+              value: '{{ .Values.ergomake.friends }}'
+            - name: LOG_LEVEL
+              value: 'debug'
+      serviceAccountName: ergomake-service-acc
+      tolerations:
+        - key: 'preview.ergomake.dev/domain'
+          operator: 'Equal'
+          value: 'core'
+          effect: 'NoSchedule'

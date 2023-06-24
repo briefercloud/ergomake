@@ -1,0 +1,44 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ergomake-role
+rules:
+  - apiGroups: ['', 'apps', 'batch', 'networking.k8s.io']
+    resources:
+      [
+        'pods',
+        'pods/log',
+        'services',
+        'deployments',
+        'ingresses',
+        'namespaces',
+        'resourcequotas',
+        'secrets',
+        'jobs',
+        'networkpolicies',
+        'configmaps',
+      ]
+    verbs:
+      [
+        'watch',
+        'get',
+        'list',
+        'create',
+        'update',
+        'patch',
+        'delete',
+        'deletecollection',
+      ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ergomake-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ergomake-role
+subjects:
+  - kind: ServiceAccount
+    name: ergomake-service-acc
+    namespace: preview-core

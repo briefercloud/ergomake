@@ -1,0 +1,6 @@
+{{ if not .Values.is_cloud }}
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: preview-builds
+{{ end }}

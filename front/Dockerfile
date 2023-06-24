@@ -1,0 +1,37 @@
+########## BUILDER ##########
+FROM --platform=linux/amd64 node:18 AS builder
+
+ARG REACT_APP_ERGOMAKE_API
+ENV REACT_APP_ERGOMAKE_API $REACT_APP_ERGOMAKE_API
+
+ARG REACT_APP_VERSION
+ENV REACT_APP_VERSION $REACT_APP_VERSION
+
+ARG REACT_APP_STRIPE_PRICING_TABLE_ID
+ENV REACT_APP_STRIPE_PRICING_TABLE_ID $REACT_APP_STRIPE_PRICING_TABLE_ID
+
+ARG REACT_APP_STRIPE_PUBLISHABLE_KEY
+ENV REACT_APP_STRIPE_PUBLISHABLE_KEY $REACT_APP_STRIPE_PUBLISHABLE_KEY
+
+WORKDIR /app
+
+COPY package*.json yarn.lock ./
+
+RUN yarn install
+
+COPY . .
+
+RUN yarn build
+
+########## RUNNER ##########
+FROM --platform=linux/amd64 node:18-alpine
+
+WORKDIR /app
+
+RUN yarn global add serve
+
+COPY --from=builder /app/build ./build
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "build"]

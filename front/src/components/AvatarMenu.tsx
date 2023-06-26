@@ -29,14 +29,16 @@ function AvatarMenu({ username, avatar, currentOwner }: Props) {
           <Menu.Item>
             <p className="mb-4">{username}</p>
           </Menu.Item>
-          <Menu.Item>
-            <a
-              href={`/gh/${currentOwner ?? username}/registries`}
-              className="flex text-md hover:text-gray-300 items-center"
-            >
-              <LockIcon className="mr-2" /> Private Registries
-            </a>
-          </Menu.Item>
+          {currentOwner && (
+            <Menu.Item>
+              <a
+                href={`/gh/${currentOwner}/registries`}
+                className="flex text-md hover:text-gray-300 items-center"
+              >
+                <LockIcon className="mr-2" /> Private Registries
+              </a>
+            </Menu.Item>
+          )}
           <Menu.Item>
             <a
               href={logoutUrl}

@@ -122,7 +122,7 @@ function AddRegistryModal({ open, onClose, owner }: Props) {
   const [res, add] = useAddRegistry(owner)
   const updating =
     res._tag !== 'pristine' &&
-    (isLoading(res) || (isSuccess(res) && res.loading))
+    (isLoading(res) || (isSuccess(res) && res.refreshing))
   const onSave = useCallback(() => {
     if (res._tag !== 'pristine' && isLoading(res)) {
       return

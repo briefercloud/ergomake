@@ -363,6 +363,114 @@ func (_c *GHAppClient_GetDefaultBranch_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// GetInstallation provides a mock function with given fields: ctx, installationID
+func (_m *GHAppClient) GetInstallation(ctx context.Context, installationID int64) (*github.Installation, error) {
+	ret := _m.Called(ctx, installationID)
+
+	var r0 *github.Installation
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*github.Installation, error)); ok {
+		return rf(ctx, installationID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *github.Installation); ok {
+		r0 = rf(ctx, installationID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*github.Installation)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, installationID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GHAppClient_GetInstallation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInstallation'
+type GHAppClient_GetInstallation_Call struct {
+	*mock.Call
+}
+
+// GetInstallation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - installationID int64
+func (_e *GHAppClient_Expecter) GetInstallation(ctx interface{}, installationID interface{}) *GHAppClient_GetInstallation_Call {
+	return &GHAppClient_GetInstallation_Call{Call: _e.mock.On("GetInstallation", ctx, installationID)}
+}
+
+func (_c *GHAppClient_GetInstallation_Call) Run(run func(ctx context.Context, installationID int64)) *GHAppClient_GetInstallation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *GHAppClient_GetInstallation_Call) Return(_a0 *github.Installation, _a1 error) *GHAppClient_GetInstallation_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *GHAppClient_GetInstallation_Call) RunAndReturn(run func(context.Context, int64) (*github.Installation, error)) *GHAppClient_GetInstallation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsOwnerInstalled provides a mock function with given fields: ctx, owner
+func (_m *GHAppClient) IsOwnerInstalled(ctx context.Context, owner string) (bool, error) {
+	ret := _m.Called(ctx, owner)
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return rf(ctx, owner)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = rf(ctx, owner)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, owner)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GHAppClient_IsOwnerInstalled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsOwnerInstalled'
+type GHAppClient_IsOwnerInstalled_Call struct {
+	*mock.Call
+}
+
+// IsOwnerInstalled is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+func (_e *GHAppClient_Expecter) IsOwnerInstalled(ctx interface{}, owner interface{}) *GHAppClient_IsOwnerInstalled_Call {
+	return &GHAppClient_IsOwnerInstalled_Call{Call: _e.mock.On("IsOwnerInstalled", ctx, owner)}
+}
+
+func (_c *GHAppClient_IsOwnerInstalled_Call) Run(run func(ctx context.Context, owner string)) *GHAppClient_IsOwnerInstalled_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *GHAppClient_IsOwnerInstalled_Call) Return(_a0 bool, _a1 error) *GHAppClient_IsOwnerInstalled_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *GHAppClient_IsOwnerInstalled_Call) RunAndReturn(run func(context.Context, string) (bool, error)) *GHAppClient_IsOwnerInstalled_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListOwnerInstalledRepos provides a mock function with given fields: ctx, owner
 func (_m *GHAppClient) ListOwnerInstalledRepos(ctx context.Context, owner string) ([]*github.Repository, error) {
 	ret := _m.Called(ctx, owner)

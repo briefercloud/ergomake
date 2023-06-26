@@ -36,11 +36,17 @@ export function RequireNoAuth({ children }: RequireNoAuthProps) {
   return fold(profile, {
     onError: () => <ErrorLayout />,
     onLoading: () => <Loading />,
-    onSuccess: ({ body }) =>
-      body ? (
-        <Navigate to={`/gh/${body.owners[0]?.login ?? body.username}`} />
-      ) : (
-        <>{children}</>
-      ),
+    onSuccess: ({ body }) => {
+      if (!body) {
+        return <>{children}</>
+      }
+
+      const first = body.owners[0]
+      if (!first) {
+        return <Navigate to="/gh" />
+      }
+
+      return <Navigate to={`/gh/${body.owners[0]?.login ?? body.username}`} />
+    },
   })
 }

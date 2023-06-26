@@ -1,28 +1,25 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
-import { isLoading, isSuccess, orElse } from '../hooks/useHTTPRequest'
+import { isLoading, orElse } from '../hooks/useHTTPRequest'
 import { Owner, useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { useReposByOwner } from '../hooks/useReposByOwner'
 import Layout from '../layouts/Projects'
+import Loading from './Loading'
 
 interface Props {
   profile: Profile
 }
 function Projects({ profile }: Props) {
   const ownersRes = useOwners()
+  const params = useParams<{ owner: string }>()
 
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
 
-  const params = useParams()
-  const owner: Owner = owners.find((o) => o.login === params.owner) ?? {
-    login: params.owner ?? profile.username,
-    avatar: profile.avatar,
-    isPaying: false,
-  }
+  const owner = owners.find((o) => o.login === params.owner)
 
-  const reposRes = useReposByOwner(owner.login)
+  const reposRes = useReposByOwner(params.owner ?? profile.username)
   const [search, setSearch] = useState('')
   const [repos, hasProjects] = useMemo(() => {
     const repos = orElse(reposRes, []).filter((r) => r.isInstalled)
@@ -43,15 +40,21 @@ function Projects({ profile }: Props) {
     [navigate]
   )
 
+  if (!owner && isLoading(ownersRes)) {
+    return <Loading />
+  }
+
+  if (!owner) {
+    return <Navigate to="/" />
+  }
+
   return (
     <Layout
       profile={profile}
       owners={owners}
       owner={owner}
       onChangeOwner={onChangeOwner}
-      loadingRepos={
-        isLoading(reposRes) || (isSuccess(reposRes) && reposRes.loading)
-      }
+      loadingRepos={isLoading(reposRes)}
       repositories={repos}
       hasProjects={hasProjects}
       search={search}

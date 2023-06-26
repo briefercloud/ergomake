@@ -20,7 +20,7 @@ import (
 
 const CheckName string = "Ergomake"
 
-var installationNotFoundError = errors.New("installation not found")
+var InstallationNotFoundError = errors.New("installation not found")
 var repoNotFoundError = errors.New("repository not found")
 
 type GHAppClient interface {
@@ -28,6 +28,8 @@ type GHAppClient interface {
 	CreateCommitStatus(ctx context.Context, owner, repo, sha, state string, targetURL *string) error
 	UpsertComment(ctx context.Context, owner string, repo string, prNumber int, commentID int64, comment string) (*github.IssueComment, error)
 	ListOwnerInstalledRepos(ctx context.Context, owner string) ([]*github.Repository, error)
+	IsOwnerInstalled(ctx context.Context, owner string) (bool, error)
+	GetInstallation(ctx context.Context, installationID int64) (*github.Installation, error)
 }
 
 type ghAppClient struct {
@@ -189,7 +191,7 @@ func (gh *ghAppClient) UpsertComment(
 func (gh *ghAppClient) ListOwnerInstalledRepos(ctx context.Context, owner string) ([]*github.Repository, error) {
 	installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
 	if err != nil {
-		if errors.Is(err, installationNotFoundError) {
+		if errors.Is(err, InstallationNotFoundError) {
 			return make([]*github.Repository, 0), nil
 		}
 
@@ -224,7 +226,7 @@ func (gh *ghAppClient) getInstallationForUser(ctx context.Context, username stri
 
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusNotFound {
-			return nil, installationNotFoundError
+			return nil, InstallationNotFoundError
 		}
 
 		return nil, errors.Wrapf(err, "fail to find installation for user %s", username)
@@ -237,7 +239,7 @@ func (gh *ghAppClient) getInstallationForOrg(ctx context.Context, org string) (*
 	installation, res, err := gh.Apps.FindOrganizationInstallation(ctx, org)
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusNotFound {
-			return nil, installationNotFoundError
+			return nil, InstallationNotFoundError
 		}
 
 		return nil, errors.Wrapf(err, "fail to find installation for org %s", org)
@@ -252,7 +254,7 @@ func (gh *ghAppClient) getOwnerInstallation(ctx context.Context, owner string) (
 
 	installation, err = gh.getInstallationForOrg(ctx, owner)
 	if err != nil {
-		if err == installationNotFoundError {
+		if err == InstallationNotFoundError {
 			installation, err = gh.getInstallationForUser(ctx, owner)
 		}
 	}
@@ -290,4 +292,24 @@ func (gh *ghAppClient) getOwnerInstallationClient(
 	installationClient := github.NewClient(httpClient)
 
 	return installationClient, nil
+}
+
+func (c *ghAppClient) IsOwnerInstalled(ctx context.Context, owner string) (bool, error) {
+	_, err := c.getOwnerInstallation(ctx, owner)
+	if errors.Is(err, InstallationNotFoundError) {
+		return false, nil
+	}
+
+	return true, errors.Wrap(err, "fail to get owner installation")
+}
+
+func (c *ghAppClient) GetInstallation(ctx context.Context, installationID int64) (*github.Installation, error) {
+	installation, res, err := c.Apps.GetInstallation(ctx, installationID)
+	if err != nil {
+		if res != nil && res.StatusCode == http.StatusNotFound {
+			return nil, InstallationNotFoundError
+		}
+	}
+
+	return installation, errors.Wrap(err, "fail to get installation")
 }

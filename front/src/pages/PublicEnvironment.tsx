@@ -10,13 +10,11 @@ function PublicEnvironment() {
   const params = useParams()
   const [search] = useSearchParams()
   const redirect = search.get('redirect')
-  const [environmentRes, refetch] = usePublicEnvironment(params.env ?? '', true)
+  const [environmentRes, refetch] = usePublicEnvironment(params.env ?? '')
   const [waitingPortsSince, setWaitingPortsSince] = useState(0)
 
   useEffect(() => {
-    const loading =
-      isLoading(environmentRes) ||
-      (isSuccess(environmentRes) && environmentRes.loading)
+    const loading = isLoading(environmentRes)
     if (loading) {
       return
     }

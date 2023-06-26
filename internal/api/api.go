@@ -48,6 +48,7 @@ type Config struct {
 	IngressNamespace                string   `split_words:"true"`
 	IngressServiceName              string   `split_words:"true"`
 	Friends                         []string `split_words:"true"`
+	BestFriends                     []string `split_words:"true"`
 }
 
 type server struct {
@@ -109,7 +110,8 @@ func NewServer(
 	ghRouter.AddRoutes(v2.Group("/github"))
 
 	stripeProvider := payment.NewStripePaymentProvider(
-		db, cfg.StripeSecretKey, cfg.StripeStandardPlanProductID, cfg.StripeProfessionalPlanProductID, cfg.Friends)
+		db, cfg.StripeSecretKey, cfg.StripeStandardPlanProductID, cfg.StripeProfessionalPlanProductID,
+		cfg.Friends, cfg.BestFriends)
 	stripeRouter := stripe.NewStripeRouter(stripeProvider, cfg.StripeWebhookSecret)
 	stripeRouter.AddRoutes(v2.Group("/stripe"))
 

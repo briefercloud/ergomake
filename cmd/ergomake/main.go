@@ -56,7 +56,7 @@ func main() {
 	envVarsProvider := envvars.NewDBEnvVarProvider(db, cfg.EnvVarsSecret)
 
 	paymentProvider := payment.NewStripePaymentProvider(db, cfg.StripeSecretKey, cfg.StripeStandardPlanProductID,
-		cfg.StripeProfessionalPlanProductID, cfg.Friends)
+		cfg.StripeProfessionalPlanProductID, cfg.Friends, cfg.BestFriends)
 
 	environmentsProvider := environments.NewDBEnvironmentsProvider(db, paymentProvider, cfg.EnvironmentsLimit)
 

@@ -11,13 +11,13 @@ function Loading(props: Props) {
   useEffect(() => {
     const timeout = setTimeout(() => {
       setShowInnerDiv(true)
-    }, 2000)
+    }, 1000)
 
     return () => clearTimeout(timeout)
   }, [])
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+    <div className="absolute inset-0 flex items-center justify-center">
       {showInnerDiv && (
         <div className="flex items-center flex-col">
           <div className="flex items-center">

@@ -5,6 +5,7 @@ import { RequireAuth, RequireNoAuth } from './components/RequireAuth'
 import Environment from './pages/Environment'
 import Environments from './pages/Environments'
 import Login from './pages/Login'
+import NoInstallation from './pages/NoInstallation'
 import Projects from './pages/Projects'
 import PublicEnvironment from './pages/PublicEnvironment'
 import Purchase from './pages/Purchase'
@@ -22,6 +23,14 @@ const router = createBrowserRouter([
   {
     path: '/environments/:env',
     element: <PublicEnvironment />,
+  },
+  {
+    path: '/gh',
+    element: (
+      <RequireAuth>
+        {(profile) => <NoInstallation profile={profile} />}
+      </RequireAuth>
+    ),
   },
   {
     path: '/gh/:owner',

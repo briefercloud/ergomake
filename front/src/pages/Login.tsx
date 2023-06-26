@@ -9,7 +9,9 @@ import Pane from '../components/Pane'
 function Login() {
   const location = useLocation()
   const params = new URLSearchParams(location.search)
-  const redirectUrl = params.get('redirectUrl') ?? `${window.location.protocol}//${window.location.host}`
+  const redirectUrl =
+    params.get('redirectUrl') ??
+    `${window.location.protocol}//${window.location.host}`
   const loginUrl = `${process.env.REACT_APP_ERGOMAKE_API}/v2/auth/login?redirectUrl=${redirectUrl}`
 
   return (

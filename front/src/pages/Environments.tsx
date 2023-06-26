@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import useBool from '../hooks/useBool'
 import { useEnvironmentsByRepo } from '../hooks/useEnvironmentsByRepo'
-import { isLoading, isSuccess, orElse } from '../hooks/useHTTPRequest'
+import { isLoading, orElse } from '../hooks/useHTTPRequest'
 import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { Repo } from '../hooks/useRepo'
@@ -66,8 +66,7 @@ function Environments(props: Props) {
   )
 
   const [variablesRes, onUpdateVariables] = useVariables(owner.login, repo.name)
-  const updatingVariables =
-    isLoading(variablesRes) || (isSuccess(variablesRes) && variablesRes.loading)
+  const updatingVariables = isLoading(variablesRes)
   const variables = useMemo(() => orElse(variablesRes, []), [variablesRes])
   const [
     managingVariables,
@@ -90,9 +89,7 @@ function Environments(props: Props) {
       repo={repo}
       repos={repos}
       onChangeRepo={onChangeRepo}
-      loadingEnvironments={
-        isLoading(envsRes) || (isSuccess(envsRes) && envsRes.loading)
-      }
+      loadingEnvironments={isLoading(envsRes)}
       environments={envs}
       search={search}
       onChangeSearch={setSearch}

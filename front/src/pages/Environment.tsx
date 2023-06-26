@@ -55,10 +55,6 @@ function Environment(props: Props) {
   const environment = environmentRes.body
 
   if (!owner || !repo || !environment) {
-    if (ownerRes.loading || repoRes.loading || environmentRes.loading) {
-      return <Loading />
-    }
-
     return <Navigate to={`/gh/${params.owner}/repos/${params.repo}`} />
   }
 

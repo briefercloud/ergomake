@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 
+	"github.com/ergomake/ergomake/internal/github/ghapp"
 	"github.com/ergomake/ergomake/internal/users"
 )
 
@@ -12,6 +13,8 @@ type authRouter struct {
 	jwtSecret    string
 	secure       bool
 	usersService users.Service
+	frontendURL  string
+	ghApp        ghapp.GHAppClient
 }
 
 func NewAuthRouter(
@@ -21,6 +24,8 @@ func NewAuthRouter(
 	jwtSecret string,
 	secure bool,
 	usersService users.Service,
+	frontendURL string,
+	ghapp ghapp.GHAppClient,
 ) *authRouter {
 	oauthConfig := &oauth2.Config{
 		ClientID:     clientID,
@@ -32,7 +37,7 @@ func NewAuthRouter(
 		},
 	}
 
-	return &authRouter{oauthConfig, jwtSecret, secure, usersService}
+	return &authRouter{oauthConfig, jwtSecret, secure, usersService, frontendURL, ghapp}
 }
 
 func (ar *authRouter) AddRoutes(router *gin.RouterGroup) {

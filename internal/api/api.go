@@ -120,6 +120,8 @@ func NewServer(
 		cfg.JWTSecret,
 		cfg.Cluster != "" && cfg.Cluster != "minikube",
 		usersService,
+		cfg.FrontendURL,
+		ghApp,
 	)
 	authRouter.AddRoutes(v2.Group("/auth"))
 

@@ -6,7 +6,7 @@ import Logo from './Logo'
 
 interface Props {
   profile: Profile
-  currentOwner: string
+  currentOwner?: string
 }
 const Navbar = ({ profile, currentOwner }: Props) => {
   return (

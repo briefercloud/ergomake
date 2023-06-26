@@ -8,7 +8,7 @@ export type HTTPResponseLoading = { _tag: 'loading' }
 export type HTTPResponseSuccess<T> = {
   _tag: 'success'
   body: T
-  loading: boolean
+  refreshing: boolean
 }
 export type HTTPResponseError = { _tag: 'error'; err: HTTPError }
 export type HTTPResponse<T> =
@@ -35,7 +35,7 @@ export const map = <A, B>(
     return {
       _tag: 'success',
       body: mapper(res.body),
-      loading: res.loading,
+      refreshing: false,
     }
   }
 
@@ -81,34 +81,17 @@ export const andThen = <A, B>(
   return res
 }
 
-const getCacheKey = (url: string) =>
-  `ergomake/${process.env.REACT_APP_VERSION}/${url}`
-
 export type UseHTTPRequest<T> = [HTTPResponse<T>, () => void]
 export const useOptionalHTTPRequest = <T>(
-  url: string,
-  skipCache?: boolean
+  url: string
 ): UseHTTPRequest<T | null> => {
   const [state, setState] = useState<HTTPResponse<T | null>>({
     _tag: 'loading',
   })
-  const [cachedData, setCachedData] = useState<
-    { _tag: 'miss' } | { _tag: 'hit'; data: T }
-  >({ _tag: 'miss' })
-
-  useEffect(() => {
-    const cacheKey = getCacheKey(url)
-    const cachedData = localStorage.getItem(cacheKey)
-    if (cachedData) {
-      setCachedData({ _tag: 'hit', data: JSON.parse(cachedData) })
-    } else {
-      setCachedData({ _tag: 'miss' })
-    }
-  }, [url])
 
   useEffect(() => {
     const loading = isLoading(state)
-    const refreshing = isSuccess(state) && state.loading
+    const refreshing = isSuccess(state) && state.refreshing
     if (!loading && !refreshing) {
       return
     }
@@ -130,7 +113,7 @@ export const useOptionalHTTPRequest = <T>(
           setState({
             _tag: 'success',
             body: null,
-            loading: false,
+            refreshing: false,
           })
         }
 
@@ -143,11 +126,7 @@ export const useOptionalHTTPRequest = <T>(
           return
         }
 
-        if (!skipCache) {
-          localStorage.setItem(getCacheKey(url), JSON.stringify(body))
-          setCachedData({ _tag: 'hit', data: body })
-        }
-        setState({ _tag: 'success', body, loading: false })
+        setState({ _tag: 'success', body, refreshing: false })
       })
       .catch((err) => {
         if (abortController.signal.aborted) {
@@ -160,7 +139,7 @@ export const useOptionalHTTPRequest = <T>(
     return () => {
       abortController.abort()
     }
-  }, [skipCache, url, state])
+  }, [url, state])
 
   useEffect(() => {
     setState({ _tag: 'loading' })
@@ -172,46 +151,33 @@ export const useOptionalHTTPRequest = <T>(
         return s
       }
 
-      if (s.loading) {
+      if (s.refreshing) {
         return s
       }
 
-      return { ...s, loading: true }
+      return { ...s, refreshing: true }
     })
   }, [setState])
 
-  return useMemo((): UseHTTPRequest<T | null> => {
-    if (isLoading(state) && cachedData._tag === 'hit') {
-      return [
-        {
-          _tag: 'success',
-          body: cachedData.data,
-          loading: true,
-        },
-        refetch,
-      ]
-    }
-
-    return [state, refetch]
-  }, [cachedData, state, refetch])
+  return useMemo(
+    (): UseHTTPRequest<T | null> => [state, refetch],
+    [state, refetch]
+  )
 }
 
-export const useHTTPRequest = <T>(
-  url: string,
-  skipCache?: boolean
-): UseHTTPRequest<T> => {
-  const [res, refetch] = useOptionalHTTPRequest<T>(url, skipCache)
+export const useHTTPRequest = <T>(url: string): UseHTTPRequest<T> => {
+  const [res, refetch] = useOptionalHTTPRequest<T>(url)
 
   return useMemo(
     () => [
-      andThen(res, ({ body, loading }) => {
+      andThen(res, ({ body }) => {
         if (body === null) {
           const err = new Error('Not Found')
           err.name = '404'
           return { _tag: 'error', err: { _tag: 'unexpected', err } }
         }
 
-        return { _tag: 'success', body, loading }
+        return { _tag: 'success', body, refreshing: false }
       }),
       refetch,
     ],
@@ -234,7 +200,7 @@ export const useHTTPMutation = <P, R = P>(
   const makeRequest = useCallback(
     (data: P) => {
       setState((s) =>
-        s._tag === 'success' ? { ...s, loading: true } : { _tag: 'loading' }
+        s._tag === 'success' ? { ...s, refreshing: true } : { _tag: 'loading' }
       )
 
       fetch(url, {
@@ -257,7 +223,7 @@ export const useHTTPMutation = <P, R = P>(
           }
 
           const response: R = await res.json()
-          setState({ _tag: 'success', body: response, loading: false })
+          setState({ _tag: 'success', body: response, refreshing: false })
         })
         .catch((err) => {
           setState({ _tag: 'error', err: { _tag: 'unexpected', err } })
@@ -266,5 +232,5 @@ export const useHTTPMutation = <P, R = P>(
     [url]
   )
 
-  return [state, makeRequest]
+  return useMemo(() => [state, makeRequest], [state, makeRequest])
 }

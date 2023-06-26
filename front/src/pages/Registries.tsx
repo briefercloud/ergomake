@@ -35,9 +35,7 @@ function Environments({ profile }: Props) {
     params.owner ?? profile.username
   )
   const registries = orElse(registriesRes, [])
-  const loadingRegistries =
-    isLoading(registriesRes) ||
-    (isSuccess(registriesRes) && registriesRes.loading)
+  const loadingRegistries = isLoading(registriesRes)
 
   const [adding, { setTrue: onOpenAdding, setFalse: setAddingToFalse }] =
     useBool(false)
@@ -70,8 +68,7 @@ function Environments({ profile }: Props) {
     return <Navigate to="/" />
   }
 
-  const loading =
-    isLoading(ownersRes) || (isSuccess(ownersRes) && ownersRes.loading)
+  const loading = isLoading(ownersRes)
   if (!owner && loading) {
     return <Loading />
   }

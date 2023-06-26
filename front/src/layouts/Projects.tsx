@@ -31,7 +31,9 @@ interface Props {
   hasProjects: boolean
 }
 
-const installationUrl = 'https://github.com/apps/ergomake/installations/new'
+export const installationUrl =
+  process.env.REACT_APP_INSTALLATION_URL ??
+  'https://github.com/apps/ergomake/installations/new'
 
 function Projects(props: Props) {
   return (

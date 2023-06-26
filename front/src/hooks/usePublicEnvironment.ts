@@ -10,10 +10,9 @@ export type PublicEnvironment = {
 }
 
 export const usePublicEnvironment = (
-  id: string,
-  skipCache?: boolean
+  id: string
 ): UseHTTPRequest<PublicEnvironment | null> => {
   const url = `${process.env.REACT_APP_ERGOMAKE_API}/v2/environments/${id}/public`
 
-  return useOptionalHTTPRequest(url, skipCache)
+  return useOptionalHTTPRequest(url)
 }

@@ -20,8 +20,16 @@ func (ghr *githubRouter) listUserOrganizations(c *gin.Context) {
 
 	client := ghoauth.FromToken(authData.GithubToken)
 
-	user, _, err := client.GetUser(c)
+	user, res, err := client.GetUser(c)
 	if err != nil {
+		if res != nil && res.StatusCode == http.StatusUnauthorized {
+			c.JSON(
+				http.StatusUnauthorized,
+				http.StatusText(http.StatusInternalServerError),
+			)
+			return
+		}
+
 		logger.Ctx(c).Err(err).
 			Msg("fail to get authenticated user")
 		c.JSON(

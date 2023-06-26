@@ -91,7 +91,13 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		env.Status = database.EnvLimited
 
 		err = r.db.Save(env).Error
-		return errors.Wrap(err, "fail to save GHCommentID to database for limited env")
+		if err != nil {
+			return errors.Wrap(err, "fail to save GHCommentID to database for limited env")
+		}
+
+		logger.Ctx(ctx).Info().Str("owner", owner).Str("repo", repo).Int("pr", prNumber).Msg("owner limited")
+
+		return nil
 	}
 
 	if prepare.Skip {

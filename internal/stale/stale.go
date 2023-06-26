@@ -84,7 +84,7 @@ func (s *server) handle(c *gin.Context) {
 		for _, svc := range env.Services {
 			err := s.clusterClient.ScaleDeployment(c, namespace, svc.Name, 1)
 			if err != nil {
-				logger.Ctx(c).Err(err).Str("host", host).Str("service", svc.Name).Msg("fail to get environment from host")
+				logger.Ctx(c).Err(err).Str("host", host).Str("service", svc.Name).Msg("fail to scale deployment up")
 				c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 				return
 			}

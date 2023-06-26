@@ -68,9 +68,9 @@ func (c *gitCompose) buildImages(
 
 		cloneTokenSecret, ok := cloneTokenSecrets[repo]
 		if !ok {
-			cloneToken, err := c.gitClient.GetCloneToken(ctx, c.owner, repo)
+			cloneToken, err := c.gitClient.GetCloneToken(ctx, c.branchOwner, repo)
 			if err != nil {
-				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", c.owner, repo)
+				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", c.branchOwner, repo)
 			}
 
 			cloneTokenSecret = makeCloneTokenSecret(namespace, repo, cloneToken)
@@ -83,21 +83,21 @@ func (c *gitCompose) buildImages(
 		}
 
 		branch := c.branch
-		branchExists, err := c.gitClient.DoesBranchExist(ctx, c.owner, repo, branch)
+		branchExists, err := c.gitClient.DoesBranchExist(ctx, c.branchOwner, repo, branch)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, c.owner, repo)
+			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, c.branchOwner, repo)
 		}
 		if !branchExists {
-			defaultBranch, err := c.gitClient.GetDefaultBranch(ctx, c.owner, repo)
+			defaultBranch, err := c.gitClient.GetDefaultBranch(ctx, c.branchOwner, repo)
 			if err != nil {
-				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", c.owner, repo)
+				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", c.branchOwner, repo)
 			}
 			branch = defaultBranch
 		}
 
 		spec := c.makeJobSpec(c.compose.Services[k].ID, k, service, buildPath)
 		spec.Spec.Template.Spec.InitContainers = []corev1.Container{
-			c.makeInitContainer(spec, cloneTokenSecret.GetName(), c.owner, repo, branch),
+			c.makeInitContainer(spec, cloneTokenSecret.GetName(), c.branchOwner, repo, branch),
 		}
 
 		job, err := c.clusterClient.CreateJob(ctx, spec)
@@ -158,12 +158,13 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 	}
 
 	labels := map[string]string{
-		"app":                          serviceID,
-		"preview.ergomake.dev/id":      serviceID,
-		"preview.ergomake.dev/service": serviceName,
-		"preview.ergomake.dev/owner":   c.owner,
-		"preview.ergomake.dev/repo":    c.repo,
-		"preview.ergomake.dev/sha":     c.sha,
+		"app":                              serviceID,
+		"preview.ergomake.dev/id":          serviceID,
+		"preview.ergomake.dev/service":     serviceName,
+		"preview.ergomake.dev/owner":       c.owner,
+		"preview.ergomake.dev/branchOwner": c.branchOwner,
+		"preview.ergomake.dev/repo":        c.repo,
+		"preview.ergomake.dev/sha":         c.sha,
 	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{

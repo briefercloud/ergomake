@@ -12,7 +12,7 @@ import (
 
 func (r *githubRouter) terminateEnvironment(ctx context.Context, event *github.PullRequestEvent) error {
 	owner := event.GetRepo().GetOwner().GetLogin()
-	repo := event.GetRepo().GetName()
+	repo := event.GetPullRequest().GetHead().GetRepo().GetName()
 	branch := event.GetPullRequest().GetHead().GetRef()
 	prNumber := event.GetPullRequest().GetNumber()
 

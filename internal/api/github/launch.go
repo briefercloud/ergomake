@@ -18,7 +18,8 @@ import (
 
 func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.PullRequestEvent) error {
 	owner := event.GetRepo().GetOwner().GetLogin()
-	repo := event.GetRepo().GetName()
+	branchOwner := event.GetPullRequest().GetHead().GetRepo().GetOwner().GetLogin()
+	repo := event.GetPullRequest().GetHead().GetRepo().GetName()
 	branch := event.GetPullRequest().GetHead().GetRef()
 	sha := event.GetPullRequest().GetHead().GetSHA()
 	prNumber := event.GetPullRequest().GetNumber()
@@ -55,6 +56,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		r.envVarsProvider,
 		r.privRegistryProvider,
 		owner,
+		branchOwner,
 		repo,
 		branch,
 		sha,
@@ -71,7 +73,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	envFrontendLink := fmt.Sprintf("%s/gh/%s/repos/%s/envs/%s", r.frontendURL, owner, repo, uid)
 
 	if isLimited {
-		err := r.ghApp.CreateCommitStatus(ctx, owner, repo, sha, "failure", github.String(envFrontendLink))
+		err := r.ghApp.CreateCommitStatus(ctx, branchOwner, repo, sha, "failure", github.String(envFrontendLink))
 		if err != nil {
 			logger.Ctx(ctx).Err(err).Str("conclusion", "failure").Msg("fail to create commit status for limited env")
 		}
@@ -97,7 +99,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		return nil
 	}
 
-	err = r.ghApp.CreateCommitStatus(ctx, owner, repo, sha, "pending", github.String(envFrontendLink))
+	err = r.ghApp.CreateCommitStatus(ctx, branchOwner, repo, sha, "pending", github.String(envFrontendLink))
 	if err != nil {
 		return errors.Wrap(err, "fail to create check")
 	}
@@ -120,7 +122,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	_, err = r.db.FindEnvironmentByID(uid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			err = r.ghApp.CreateCommitStatus(ctx, owner, repo, sha, "failure", nil)
+			err = r.ghApp.CreateCommitStatus(ctx, branchOwner, repo, sha, "failure", nil)
 			if err != nil {
 				logger.Ctx(ctx).Err(err).Str("conclusion", "failure").Msg("fail to create commit status")
 			}

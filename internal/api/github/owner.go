@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ergomake/ergomake/internal/api/auth"
-	"github.com/ergomake/ergomake/internal/github/ghoauth"
 	"github.com/ergomake/ergomake/internal/logger"
 )
 
@@ -19,7 +18,19 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 		return
 	}
 
-	client := ghoauth.FromToken(authData.GithubToken)
+	isAuthorized, err := auth.IsAuthorized(c, owner, authData)
+	if err != nil {
+		logger.Ctx(c).Err(err).
+			Str("owner", owner).
+			Msg("fail to check if user is authorized to list owner repos")
+		c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		return
+	}
+
+	if !isAuthorized {
+		c.JSON(http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		return
+	}
 
 	environments, err := ghr.db.FindEnvironmentsByOwner(owner)
 	if err != nil {
@@ -43,19 +54,7 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 		}
 	}
 
-	repositories, err := client.ListOwnerRepos(c, owner)
-	if err != nil {
-		logger.Ctx(c).Err(err).
-			Str("owner", owner).
-			Msg("fail to list org repos")
-		c.JSON(
-			http.StatusInternalServerError,
-			http.StatusText(http.StatusInternalServerError),
-		)
-		return
-	}
-
-	installedReposList, err := ghr.ghApp.ListOwnerInstalledRepos(c, owner)
+	repositories, err := ghr.ghApp.ListOwnerInstalledRepos(c, owner)
 	if err != nil {
 		logger.Ctx(c).Log().Stack().Err(err).
 			Str("owner", owner).
@@ -67,15 +66,8 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 		return
 	}
 
-	installedRepos := make(map[string]struct{})
-	for _, repo := range installedReposList {
-		installedRepos[repo.GetName()] = struct{}{}
-	}
-
 	repos := []gin.H{}
 	for _, repo := range repositories {
-		_, isInstalled := installedRepos[repo.GetName()]
-
 		environmentCount, ok := envsCountByRepo[repo.GetName()]
 		if !ok {
 			environmentCount = 0
@@ -84,7 +76,7 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 		repos = append(repos, gin.H{
 			"owner":            owner,
 			"name":             repo.GetName(),
-			"isInstalled":      isInstalled,
+			"isInstalled":      true,
 			"environmentCount": environmentCount,
 		})
 	}

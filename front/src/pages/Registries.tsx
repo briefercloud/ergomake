@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import useBool from '../hooks/useBool'
-import { isError, isLoading, isSuccess, orElse } from '../hooks/useHTTPRequest'
+import { isError, isLoading, orElse } from '../hooks/useHTTPRequest'
 import { Owner, useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { Registry, useRegistries } from '../hooks/useRegistries'

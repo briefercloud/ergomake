@@ -29,19 +29,26 @@ type stripePaymentProvider struct {
 	standardPlanProductID     string
 	professionalPlanProductID string
 	friends                   map[string]struct{}
+	bestFriends               map[string]struct{}
 }
 
 func NewStripePaymentProvider(
 	db *database.DB,
 	secretKey, standardPlanProductID, professionalPlanProductID string,
 	friendsArr []string,
+	bestFriendsArr []string,
 ) *stripePaymentProvider {
 	friends := make(map[string]struct{})
 	for _, friend := range friendsArr {
 		friends[friend] = struct{}{}
 	}
 
-	return &stripePaymentProvider{db, secretKey, standardPlanProductID, professionalPlanProductID, friends}
+	bestFriends := make(map[string]struct{})
+	for _, friend := range bestFriendsArr {
+		bestFriends[friend] = struct{}{}
+	}
+
+	return &stripePaymentProvider{db, secretKey, standardPlanProductID, professionalPlanProductID, bestFriends, friends}
 }
 
 func (stp *stripePaymentProvider) SaveSubscription(ctx context.Context, owner, subscriptionID string) error {
@@ -65,8 +72,12 @@ func (stp *stripePaymentProvider) SaveSubscription(ctx context.Context, owner, s
 func (stp *stripePaymentProvider) GetOwnerPlan(ctx context.Context, owner string) (PaymentPlan, error) {
 	stripe.Key = stp.secretKey
 
-	if _, isFriend := stp.friends[owner]; isFriend {
+	if _, isBestFriend := stp.bestFriends[owner]; isBestFriend {
 		return PaymentPlanProfessional, nil
+	}
+
+	if _, isFriend := stp.friends[owner]; isFriend {
+		return PaymentPlanStandard, nil
 	}
 
 	var dbSubs []stripeSubscription

@@ -99,4 +99,4 @@ You can also reach us directly (and more quickly) in our [Discord server](https:
 
 ## License
 
-Licensed under the [GNU GPLv3 License](https://github.com/ergomake/ergomake/blob/develop/LICENSE).
+Licensed under the [GNU GPLv3 License](https://github.com/ergomake/ergomake/blob/main/LICENSE).

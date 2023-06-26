@@ -84,12 +84,13 @@ type gitCompose struct {
 	envVarsProvider      envvars.EnvVarsProvider
 	privRegistryProvider privregistry.PrivRegistryProvider
 
-	owner    string
-	repo     string
-	branch   string
-	sha      string
-	prNumber int
-	author   string
+	owner       string
+	branchOwner string
+	repo        string
+	branch      string
+	sha         string
+	prNumber    int
+	author      string
 
 	projectPath   string
 	composePath   string
@@ -108,6 +109,7 @@ func NewGitCompose(
 	envVarsProvider envvars.EnvVarsProvider,
 	privRegistryProvider privregistry.PrivRegistryProvider,
 	owner string,
+	branchOwner string,
 	repo string,
 	branch string,
 	sha string,
@@ -121,6 +123,7 @@ func NewGitCompose(
 		envVarsProvider:      envVarsProvider,
 		privRegistryProvider: privRegistryProvider,
 		owner:                owner,
+		branchOwner:          branchOwner,
 		repo:                 repo,
 		branch:               branch,
 		sha:                  sha,
@@ -149,6 +152,7 @@ func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult,
 	dbEnv := database.NewEnvironment(
 		id,
 		c.owner,
+		c.branchOwner,
 		c.repo,
 		c.branch,
 		c.prNumber,
@@ -416,7 +420,7 @@ func (c *gitCompose) cloneRepo(ctx context.Context, namespace string) (string, e
 		return "", errors.Wrap(err, "fail to make inner dir inside temp dir")
 	}
 
-	err = c.gitClient.CloneRepo(ctx, c.owner, c.repo, c.branch, dir)
+	err = c.gitClient.CloneRepo(ctx, c.branchOwner, c.repo, c.branch, dir)
 
 	return dir, errors.Wrap(err, "fail to clone from github")
 }

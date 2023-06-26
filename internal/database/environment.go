@@ -27,6 +27,7 @@ type Environment struct {
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 	Owner       string
+	BranchOwner string
 	Repo        string
 	Branch      sql.NullString
 	PullRequest sql.NullInt32
@@ -36,11 +37,12 @@ type Environment struct {
 	GHCommentID int64     `gorm:"column:gh_comment_id"`
 }
 
-func NewEnvironment(ID uuid.UUID, owner, repo, branch string, pullRequest int, author string, status EnvStatus) *Environment {
+func NewEnvironment(ID uuid.UUID, owner, branchOwner, repo, branch string, pullRequest int, author string, status EnvStatus) *Environment {
 	return &Environment{
-		ID:    ID,
-		Owner: owner,
-		Repo:  repo,
+		ID:          ID,
+		Owner:       owner,
+		BranchOwner: branchOwner,
+		Repo:        repo,
 		Branch: sql.NullString{
 			String: branch,
 			Valid:  branch != "",

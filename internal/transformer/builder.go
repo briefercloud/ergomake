@@ -15,6 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/ergomake/ergomake/internal/envvars"
 )
 
 type BuildImagesResult struct {
@@ -95,7 +97,12 @@ func (c *gitCompose) buildImages(
 			branch = defaultBranch
 		}
 
-		spec := c.makeJobSpec(c.compose.Services[k].ID, k, service, buildPath)
+		vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, repo)
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to list env vars by repo")
+		}
+
+		spec := c.makeJobSpec(c.compose.Services[k].ID, k, service, buildPath, vars)
 		spec.Spec.Template.Spec.InitContainers = []corev1.Container{
 			c.makeInitContainer(spec, cloneTokenSecret.GetName(), c.branchOwner, repo, branch),
 		}
@@ -129,7 +136,10 @@ func makeCloneTokenSecret(namespace, repo, token string) *corev1.Secret {
 	}
 }
 
-func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service kobject.ServiceConfig, buildPath string) *batchv1.Job {
+func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service kobject.ServiceConfig, buildPath string, vars []envvars.EnvVar) *batchv1.Job {
+
+	buildArgsSet := make(map[string]struct{})
+
 	buildArgs := []string{}
 	for k, v := range service.BuildArgs {
 		if v == nil {
@@ -137,6 +147,15 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 		}
 
 		buildArgs = append(buildArgs, "--build-arg", fmt.Sprintf("%s=%s", k, *v))
+		buildArgsSet[k] = struct{}{}
+	}
+
+	for _, v := range vars {
+		if _, ok := buildArgsSet[v.Name]; ok {
+			continue
+		}
+
+		buildArgs = append(buildArgs, "--build-arg", fmt.Sprintf("%s=%s", v.Name, v.Value))
 	}
 
 	args := append([]string{

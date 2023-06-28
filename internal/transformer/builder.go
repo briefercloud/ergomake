@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/ergomake/ergomake/internal/envvars"
 )
@@ -59,7 +60,7 @@ func (c *gitCompose) buildImages(
 	namespace string,
 ) (*BuildImagesResult, error) {
 
-	cloneTokenSecrets := make(map[string]*corev1.Secret)
+	cloneTokenSecrets := make(map[string]*string)
 	jobs := []*batchv1.Job{}
 	for k, service := range c.komposeObject.ServiceConfigs {
 		if service.Build == "" && service.Dockerfile == "" {
@@ -68,20 +69,21 @@ func (c *gitCompose) buildImages(
 
 		repo, buildPath := c.computeRepoAndBuildPath(service.Build, c.repo)
 
-		cloneTokenSecret, ok := cloneTokenSecrets[repo]
-		if !ok {
+		cloneTokenSecretName, ok := cloneTokenSecrets[repo]
+		if !ok && c.needsToken {
 			cloneToken, err := c.gitClient.GetCloneToken(ctx, c.branchOwner, repo)
 			if err != nil {
 				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", c.branchOwner, repo)
 			}
 
-			cloneTokenSecret = makeCloneTokenSecret(namespace, repo, cloneToken)
+			cloneTokenSecret := makeCloneTokenSecret(namespace, repo, cloneToken)
 			err = c.clusterClient.CreateSecret(ctx, cloneTokenSecret)
 			if err != nil {
 				return nil, errors.Wrap(err, "fail to add github token secret into cluster")
 			}
 
-			cloneTokenSecrets[repo] = cloneTokenSecret
+			cloneTokenSecretName = pointer.String(cloneTokenSecret.GetName())
+			cloneTokenSecrets[repo] = cloneTokenSecretName
 		}
 
 		branch := c.branch
@@ -104,7 +106,7 @@ func (c *gitCompose) buildImages(
 
 		spec := c.makeJobSpec(c.compose.Services[k].ID, k, service, buildPath, vars)
 		spec.Spec.Template.Spec.InitContainers = []corev1.Container{
-			c.makeInitContainer(spec, cloneTokenSecret.GetName(), c.branchOwner, repo, branch),
+			c.makeInitContainer(spec, c.branchOwner, repo, branch, cloneTokenSecretName),
 		}
 
 		job, err := c.clusterClient.CreateJob(ctx, spec)
@@ -261,10 +263,10 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 
 func (c *gitCompose) makeInitContainer(
 	jobSpec *batchv1.Job,
-	githubTokenSecretName string,
 	githubOwner string,
 	githubRepo string,
 	githubBranch string,
+	githubTokenSecretName *string,
 ) corev1.Container {
 	cmd := append([]string{
 		"git",
@@ -273,6 +275,35 @@ func (c *gitCompose) makeInitContainer(
 	}, c.gitClient.GetCloneParams()...)
 
 	cmd = append(cmd, "/workspace")
+
+	env := []corev1.EnvVar{
+		{
+			Name:  "OWNER",
+			Value: githubOwner,
+		},
+		{
+			Name:  "REPO",
+			Value: githubRepo,
+		},
+		{
+			Name:  "BRANCH",
+			Value: githubBranch,
+		},
+	}
+
+	if githubTokenSecretName != nil {
+		env = append(env, corev1.EnvVar{
+			Name: "GIT_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					Key: "token",
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: *githubTokenSecretName,
+					},
+				},
+			},
+		})
+	}
 
 	return corev1.Container{
 		Name:    "git-clone",
@@ -284,31 +315,7 @@ func (c *gitCompose) makeInitContainer(
 				MountPath: "/workspace",
 			},
 		},
-		Env: []corev1.EnvVar{
-			{
-				Name:  "OWNER",
-				Value: githubOwner,
-			},
-			{
-				Name:  "REPO",
-				Value: githubRepo,
-			},
-			{
-				Name:  "BRANCH",
-				Value: githubBranch,
-			},
-			{
-				Name: "GIT_TOKEN",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						Key: "token",
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: githubTokenSecretName,
-						},
-					},
-				},
-			},
-		},
+		Env: env,
 	}
 }
 

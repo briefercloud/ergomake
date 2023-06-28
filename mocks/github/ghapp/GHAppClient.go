@@ -23,13 +23,13 @@ func (_m *GHAppClient) EXPECT() *GHAppClient_Expecter {
 	return &GHAppClient_Expecter{mock: &_m.Mock}
 }
 
-// CloneRepo provides a mock function with given fields: ctx, owner, repo, branch, dir
-func (_m *GHAppClient) CloneRepo(ctx context.Context, owner string, repo string, branch string, dir string) error {
-	ret := _m.Called(ctx, owner, repo, branch, dir)
+// CloneRepo provides a mock function with given fields: ctx, owner, repo, branch, dir, isPublic
+func (_m *GHAppClient) CloneRepo(ctx context.Context, owner string, repo string, branch string, dir string, isPublic bool) error {
+	ret := _m.Called(ctx, owner, repo, branch, dir, isPublic)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string) error); ok {
-		r0 = rf(ctx, owner, repo, branch, dir)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string, bool) error); ok {
+		r0 = rf(ctx, owner, repo, branch, dir, isPublic)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -48,13 +48,14 @@ type GHAppClient_CloneRepo_Call struct {
 //   - repo string
 //   - branch string
 //   - dir string
-func (_e *GHAppClient_Expecter) CloneRepo(ctx interface{}, owner interface{}, repo interface{}, branch interface{}, dir interface{}) *GHAppClient_CloneRepo_Call {
-	return &GHAppClient_CloneRepo_Call{Call: _e.mock.On("CloneRepo", ctx, owner, repo, branch, dir)}
+//   - isPublic bool
+func (_e *GHAppClient_Expecter) CloneRepo(ctx interface{}, owner interface{}, repo interface{}, branch interface{}, dir interface{}, isPublic interface{}) *GHAppClient_CloneRepo_Call {
+	return &GHAppClient_CloneRepo_Call{Call: _e.mock.On("CloneRepo", ctx, owner, repo, branch, dir, isPublic)}
 }
 
-func (_c *GHAppClient_CloneRepo_Call) Run(run func(ctx context.Context, owner string, repo string, branch string, dir string)) *GHAppClient_CloneRepo_Call {
+func (_c *GHAppClient_CloneRepo_Call) Run(run func(ctx context.Context, owner string, repo string, branch string, dir string, isPublic bool)) *GHAppClient_CloneRepo_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string), args[5].(bool))
 	})
 	return _c
 }
@@ -64,7 +65,7 @@ func (_c *GHAppClient_CloneRepo_Call) Return(_a0 error) *GHAppClient_CloneRepo_C
 	return _c
 }
 
-func (_c *GHAppClient_CloneRepo_Call) RunAndReturn(run func(context.Context, string, string, string, string) error) *GHAppClient_CloneRepo_Call {
+func (_c *GHAppClient_CloneRepo_Call) RunAndReturn(run func(context.Context, string, string, string, string, bool) error) *GHAppClient_CloneRepo_Call {
 	_c.Call.Return(run)
 	return _c
 }

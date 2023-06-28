@@ -19,7 +19,6 @@ import { Profile } from '../hooks/useProfile'
 import { Repo } from '../hooks/useRepo'
 
 function showDegradedReason(degradedReason: DegradedReason): string {
-  debugger
   try {
     switch (degradedReason.type) {
       case 'compose-not-found':
@@ -119,6 +118,12 @@ function EnvironmentLayout(props: Props) {
                 <p className="ml-2 text-sm font-bold text-red-400">Failed</p>
               </div>
             )}
+            {props.environment.status === 'limited' && (
+              <div className="flex items-center">
+                <XCircleIcon />
+                <p className="ml-2 text-sm font-bold text-red-400">Limited</p>
+              </div>
+            )}
           </div>
           <h1 className="mt-4 text-white font-bold text-4xl">
             {props.environment.branch}
@@ -153,48 +158,49 @@ function EnvironmentLayout(props: Props) {
           </div>
         )}
 
-        {props.environment.degradedReason?.type !== 'compose-not-found' && (
-          <Pane className="flex mt-8 flex-col">
-            <h2 className="text-white font-bold text-lg mb-8">Logs</h2>
-            <ButtonGroup
-              value={props.logsSwitch}
-              onChange={onChangeLogsSwitch}
-              className="ml-auto bg-black"
-            >
-              <ButtonGroup.Item value="live">Live</ButtonGroup.Item>
-              <ButtonGroup.Item value="build">Build</ButtonGroup.Item>
-            </ButtonGroup>
-            <div className="relative">
-              {showingServices.map((s, i) => {
-                let className = 'min-w-[100px] py-2 px-4 font-bold'
-                if (s.id === currentService?.id) {
-                  className +=
-                    ' relative text-primary-500 border-2 border-b-0 rounded-t-xl z-10 bg-black border-outcolor'
-                } else {
-                  className += ' text-gray-300'
-                }
-
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => props.onChangeService(i)}
-                    className={className}
-                    style={{ marginBottom: -2 }}
-                  >
-                    {s.name}
-                  </button>
-                )
-              })}
-              <div
-                className={`h-[42rem] bg-black flex flex-col-reverse border-2 rounded-xl py-2 px-4 border-outcolor overflow-y-auto scrollbar-hide${
-                  props.currentService === 0 ? ' rounded-tl-none' : ''
-                }`}
+        {props.environment.status !== 'limited' &&
+          props.environment.degradedReason?.type !== 'compose-not-found' && (
+            <Pane className="flex mt-8 flex-col">
+              <h2 className="text-white font-bold text-lg mb-8">Logs</h2>
+              <ButtonGroup
+                value={props.logsSwitch}
+                onChange={onChangeLogsSwitch}
+                className="ml-auto bg-black"
               >
-                {logs}
+                <ButtonGroup.Item value="live">Live</ButtonGroup.Item>
+                <ButtonGroup.Item value="build">Build</ButtonGroup.Item>
+              </ButtonGroup>
+              <div className="relative">
+                {showingServices.map((s, i) => {
+                  let className = 'min-w-[100px] py-2 px-4 font-bold'
+                  if (s.id === currentService?.id) {
+                    className +=
+                      ' relative text-primary-500 border-2 border-b-0 rounded-t-xl z-10 bg-black border-outcolor'
+                  } else {
+                    className += ' text-gray-300'
+                  }
+
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => props.onChangeService(i)}
+                      className={className}
+                      style={{ marginBottom: -2 }}
+                    >
+                      {s.name}
+                    </button>
+                  )
+                })}
+                <div
+                  className={`h-[42rem] bg-black flex flex-col-reverse border-2 rounded-xl py-2 px-4 border-outcolor overflow-y-auto scrollbar-hide${
+                    props.currentService === 0 ? ' rounded-tl-none' : ''
+                  }`}
+                >
+                  {logs}
+                </div>
               </div>
-            </div>
-          </Pane>
-        )}
+            </Pane>
+          )}
       </div>
     </Background>
   )

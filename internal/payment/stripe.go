@@ -48,7 +48,7 @@ func NewStripePaymentProvider(
 		bestFriends[friend] = struct{}{}
 	}
 
-	return &stripePaymentProvider{db, secretKey, standardPlanProductID, professionalPlanProductID, bestFriends, friends}
+	return &stripePaymentProvider{db, secretKey, standardPlanProductID, professionalPlanProductID, friends, bestFriends}
 }
 
 func (stp *stripePaymentProvider) SaveSubscription(ctx context.Context, owner, subscriptionID string) error {

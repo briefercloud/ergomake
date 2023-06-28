@@ -32,16 +32,25 @@ func getMainServiceUrl(env *transformer.Compose) string {
 	return getServiceUrl(env.FirstService())
 }
 
-func createFailureComment(frontendLink string) string {
+func createFailureComment(frontendLink string, validationError transformer.ProjectValidationError) string {
+	reason := fmt.Sprintf(
+		`You can see your environment build logs [here](%s). Please double-check your `+"`docker-compose.yml`"+` file is valid.`,
+		frontendLink,
+	)
+
+	if validationError != nil {
+		reason = validationError.GetErrorMessage()
+	}
+
 	return fmt.Sprintf(`Hi 👋
 
 We couldn't create a preview environment for this pull-request 😥
 
-You can see your environment build logs [here](%s). Please double-check your `+"`docker-compose.yml`"+` file is valid.
+%s
 
 If you need help, email us at contact@getergomake.com or join [Discord](https://discord.gg/daGzchUGDt).
 
-[Click here](https://github.com/apps/ergomake) to disable Ergomake.`, frontendLink)
+[Click here](https://github.com/apps/ergomake) to disable Ergomake.`, reason)
 }
 
 func createLimitedComment() string {

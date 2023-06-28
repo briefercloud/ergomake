@@ -70,12 +70,13 @@ func (er *environmentsRouter) list(c *gin.Context) {
 		}
 
 		envs = append(envs, gin.H{
-			"id":        env.ID,
-			"branch":    branch,
-			"source":    source,
-			"status":    env.Status,
-			"createdAt": env.CreatedAt,
-			"services":  services,
+			"id":             env.ID,
+			"branch":         branch,
+			"source":         source,
+			"status":         env.Status,
+			"createdAt":      env.CreatedAt,
+			"services":       services,
+			"degradedReason": env.DegradedReason,
 		})
 	}
 

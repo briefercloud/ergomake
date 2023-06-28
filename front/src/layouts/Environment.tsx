@@ -1,4 +1,7 @@
-import { ChevronLeftIcon } from '@heroicons/react/24/solid'
+import {
+  ChevronLeftIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/solid'
 import AnsiToHTML from 'ansi-to-html'
 import React, { useCallback } from 'react'
 import { Link } from 'react-router-dom'
@@ -8,11 +11,26 @@ import ButtonGroup from '../components/ButtonGroup'
 import ExternalLinkIcon from '../components/ExternalLinkIcon'
 import Navbar from '../components/Navbar'
 import Pane from '../components/Pane'
-import { Environment } from '../hooks/useEnvironment'
+import XCircleIcon from '../components/XCircleIcon'
+import { DegradedReason, Environment } from '../hooks/useEnvironment'
 import { LogData } from '../hooks/useLogs'
 import { Owner } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { Repo } from '../hooks/useRepo'
+
+function showDegradedReason(degradedReason: DegradedReason): string {
+  debugger
+  try {
+    switch (degradedReason.type) {
+      case 'compose-not-found':
+        return 'Could not find a compose file.'
+      default:
+        return degradedReason.type
+    }
+  } catch (err) {
+    return 'Oops! Something went wrong.'
+  }
+}
 
 const converter = new AnsiToHTML()
 
@@ -69,6 +87,7 @@ function EnvironmentLayout(props: Props) {
         />
       )
     })
+
   return (
     <Background>
       <Navbar profile={props.profile} currentOwner={props.owner.login} />
@@ -81,80 +100,101 @@ function EnvironmentLayout(props: Props) {
           Back to project
         </Link>
         <Pane>
-          <h2 className="flex items-center text-white font-bold text-sm">
-            <img
-              className="mr-2 w-8 h-8 rounded-full"
-              src={props.owner.avatar}
-              alt={props.owner.login}
-            />
-            {props.owner.login}
-            <span className="mx-2 text-primary-500">/</span>
-            {props.repo.name}
-            <span className="mx-2 text-primary-500">/</span>
-            {props.environment.branch}
-          </h2>
-          <h1 className="mt-4 mb-8 text-white font-bold text-4xl">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center text-white font-bold text-sm">
+              <img
+                className="mr-2 w-8 h-8 rounded-full"
+                src={props.owner.avatar}
+                alt={props.owner.login}
+              />
+              {props.owner.login}
+              <span className="mx-2 text-primary-500">/</span>
+              {props.repo.name}
+              <span className="mx-2 text-primary-500">/</span>
+              {props.environment.branch}
+            </h2>
+            {props.environment.status === 'degraded' && (
+              <div className="flex items-center">
+                <XCircleIcon />
+                <p className="ml-2 text-sm font-bold text-red-400">Failed</p>
+              </div>
+            )}
+          </div>
+          <h1 className="mt-4 text-white font-bold text-4xl">
             {props.environment.branch}
           </h1>
-          <div>
-            <p>Link to preview</p>
-            <div className="flex justify-between border-2 border-outcolor mt-2">
-              <p className="mx-4 my-3">
-                https://{props.environment.services[0]?.url ?? ''}
-              </p>
-              <div>
-                <a
-                  href={`https://${props.environment.services[0]?.url ?? ''}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center h-full border-l-2 border-outcolor px-3"
-                >
-                  <ExternalLinkIcon />
-                </a>
+
+          {(props.environment.status === 'success' ||
+            props.environment.status === 'stale') && (
+            <div className="mt-8">
+              <p>Link to preview</p>
+              <div className="flex justify-between border-2 border-outcolor mt-2">
+                <p className="mx-4 my-3">
+                  https://{props.environment.services[0]?.url ?? ''}
+                </p>
+                <div>
+                  <a
+                    href={`https://${props.environment.services[0]?.url ?? ''}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center h-full border-l-2 border-outcolor px-3"
+                  >
+                    <ExternalLinkIcon />
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </Pane>
-        <Pane className="flex mt-8 flex-col">
-          <h2 className="text-white font-bold text-lg mb-8">Logs</h2>
-          <ButtonGroup
-            value={props.logsSwitch}
-            onChange={onChangeLogsSwitch}
-            className="ml-auto bg-black"
-          >
-            <ButtonGroup.Item value="live">Live</ButtonGroup.Item>
-            <ButtonGroup.Item value="build">Build</ButtonGroup.Item>
-          </ButtonGroup>
-          <div className="relative">
-            {showingServices.map((s, i) => {
-              let className = 'min-w-[100px] py-2 px-4 font-bold'
-              if (s.id === currentService?.id) {
-                className +=
-                  ' relative text-primary-500 border-2 border-b-0 rounded-t-xl z-10 bg-black border-outcolor'
-              } else {
-                className += ' text-gray-300'
-              }
+        {props.environment.degradedReason && (
+          <div className="text-gray-300 p-4 rounded-lg flex space-x-2 items-center justify-center">
+            <ExclamationTriangleIcon className="w-6 h-6 inline-block text-yellow-500" />
+            <span>{showDegradedReason(props.environment.degradedReason)}</span>
+          </div>
+        )}
 
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => props.onChangeService(i)}
-                  className={className}
-                  style={{ marginBottom: -2 }}
-                >
-                  {s.name}
-                </button>
-              )
-            })}
-            <div
-              className={`h-[42rem] bg-black flex flex-col-reverse border-2 rounded-xl py-2 px-4 border-outcolor overflow-y-auto scrollbar-hide${
-                props.currentService === 0 ? ' rounded-tl-none' : ''
-              }`}
+        {props.environment.degradedReason?.type !== 'compose-not-found' && (
+          <Pane className="flex mt-8 flex-col">
+            <h2 className="text-white font-bold text-lg mb-8">Logs</h2>
+            <ButtonGroup
+              value={props.logsSwitch}
+              onChange={onChangeLogsSwitch}
+              className="ml-auto bg-black"
             >
-              {logs}
+              <ButtonGroup.Item value="live">Live</ButtonGroup.Item>
+              <ButtonGroup.Item value="build">Build</ButtonGroup.Item>
+            </ButtonGroup>
+            <div className="relative">
+              {showingServices.map((s, i) => {
+                let className = 'min-w-[100px] py-2 px-4 font-bold'
+                if (s.id === currentService?.id) {
+                  className +=
+                    ' relative text-primary-500 border-2 border-b-0 rounded-t-xl z-10 bg-black border-outcolor'
+                } else {
+                  className += ' text-gray-300'
+                }
+
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => props.onChangeService(i)}
+                    className={className}
+                    style={{ marginBottom: -2 }}
+                  >
+                    {s.name}
+                  </button>
+                )
+              })}
+              <div
+                className={`h-[42rem] bg-black flex flex-col-reverse border-2 rounded-xl py-2 px-4 border-outcolor overflow-y-auto scrollbar-hide${
+                  props.currentService === 0 ? ' rounded-tl-none' : ''
+                }`}
+              >
+                {logs}
+              </div>
             </div>
-          </div>
-        </Pane>
+          </Pane>
+        )}
       </div>
     </Background>
   )

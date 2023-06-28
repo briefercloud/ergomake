@@ -143,8 +143,9 @@ func (tr *TransformResult) Failed() bool {
 }
 
 type PrepareResult struct {
-	Environment *database.Environment
-	Skip        bool
+	Environment     *database.Environment
+	Skip            bool
+	ValidationError ProjectValidationError
 }
 
 func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult, error) {
@@ -166,23 +167,38 @@ func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult,
 
 	c.environment = dbEnv
 
-	skip, err := c.loadComposeObject(ctx, namespace)
+	loadComposeResult, err := c.loadComposeObject(ctx, namespace)
 	if err != nil {
 		return nil, c.fail(errors.Wrap(err, "fail to load compose object"))
 	}
 
 	c.prepared = true
 
-	if skip {
+	if loadComposeResult.Skip {
 		err := c.db.Delete(c.environment).Error
 		if err != nil {
 			logger.Ctx(ctx).Err(err).Msg("fail to delete skipped environment")
 		}
 	}
 
+	if loadComposeResult.ValidationError != nil {
+		dbEnv.Status = database.EnvDegraded
+		dbEnv.DegradedReason = loadComposeResult.ValidationError.Serialize()
+		err = c.db.Save(&dbEnv).Error
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to save degraded reason to db")
+		}
+
+		return &PrepareResult{
+			Environment:     dbEnv,
+			Skip:            false,
+			ValidationError: loadComposeResult.ValidationError,
+		}, nil
+	}
+
 	return &PrepareResult{
 		Environment: dbEnv,
-		Skip:        skip,
+		Skip:        loadComposeResult.Skip,
 	}, nil
 }
 
@@ -321,15 +337,20 @@ func (c *gitCompose) removeUnsupportedVolumes(service *kobject.ServiceConfig) {
 	service.Volumes = volumes
 }
 
-func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (bool, error) {
+type LoadComposeResult struct {
+	Skip            bool
+	ValidationError ProjectValidationError
+}
+
+func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (*LoadComposeResult, error) {
 	loader, err := loader.GetLoader("compose")
 	if err != nil {
-		return true, errors.Wrap(err, "fail to get kompose loader")
+		return nil, errors.Wrap(err, "fail to get kompose loader")
 	}
 
 	projectPath, err := c.cloneRepo(ctx, namespace)
 	if err != nil {
-		return true, errors.Wrap(err, "fail to clone repo from github")
+		return nil, errors.Wrap(err, "fail to clone repo from github")
 	}
 
 	c.projectPath = projectPath
@@ -348,24 +369,27 @@ func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (b
 			err = nil
 		}
 
-		return true, errors.Wrap(err, "fail to check if .ergomake folder exists")
+		return &LoadComposeResult{Skip: true}, errors.Wrap(err, "fail to check if .ergomake folder exists")
 	}
 
-	composePath, err := findComposePath(c.projectPath)
+	validationErr, err := c.validateProject()
 	if err != nil {
-		return false, errors.Wrapf(err, "fail to find compose at %s", projectPath)
+		return nil, errors.Wrap(err, "fail to validate project")
 	}
-	c.composePath = composePath
 
-	composeBytes, err := ioutil.ReadFile(composePath)
+	if validationErr != nil {
+		return &LoadComposeResult{Skip: false, ValidationError: validationErr}, nil
+	}
+
+	composeBytes, err := ioutil.ReadFile(c.composePath)
 	if err != nil {
-		return false, errors.Wrapf(err, "fail to read compose at %s", composePath)
+		return nil, errors.Wrapf(err, "fail to read compose at %s", c.composePath)
 	}
 	composeStr := string(composeBytes)
 
-	komposeObject, err := loader.LoadFile([]string{composePath})
+	komposeObject, err := loader.LoadFile([]string{c.composePath})
 	if err != nil {
-		return false, errors.Wrapf(err, "fail to load compose %s", composePath)
+		return nil, errors.Wrapf(err, "fail to load compose %s", c.composePath)
 	}
 	c.komposeObject = &komposeObject
 
@@ -376,7 +400,7 @@ func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (b
 
 	err = c.fixComposeObject(projectPath, namespace)
 
-	return false, errors.Wrap(err, "fail to fix compose object")
+	return &LoadComposeResult{}, errors.Wrap(err, "fail to fix compose object")
 }
 
 func (c *gitCompose) transformCompose(ctx context.Context, namespace string) ([]runtime.Object, error) {
@@ -423,33 +447,6 @@ func (c *gitCompose) cloneRepo(ctx context.Context, namespace string) (string, e
 	err = c.gitClient.CloneRepo(ctx, c.branchOwner, c.repo, c.branch, dir)
 
 	return dir, errors.Wrap(err, "fail to clone from github")
-}
-
-func findComposePath(projectPath string) (string, error) {
-	candidates := []string{
-		".ergomake/compose.yml",
-		".ergomake/compose.yaml",
-		".ergomake/docker-compose.yml",
-		".ergomake/docker-compose.yaml",
-		"compose.yml",
-		"compose.yaml",
-		"docker-compose.yml",
-		"docker-compose.yaml",
-	}
-
-	var retErr error
-	for _, candidate := range candidates {
-		composePath := path.Join(projectPath, candidate)
-		if _, err := os.Stat(composePath); err != nil {
-			retErr = errors.Wrapf(err, "fail to stat %s", composePath)
-			continue
-
-		}
-
-		return composePath, nil
-	}
-
-	return "", retErr
 }
 
 func (c *gitCompose) makeEnvironmentFromServices(komposeServices map[string]kobject.ServiceConfig, rawCompose string) *Compose {

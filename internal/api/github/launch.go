@@ -105,6 +105,11 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		return nil
 	}
 
+	if prepare.ValidationError != nil {
+		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID, prepare.ValidationError)
+		return nil
+	}
+
 	err = r.ghApp.CreateCommitStatus(ctx, branchOwner, repo, sha, "pending", github.String(envFrontendLink))
 	if err != nil {
 		return errors.Wrap(err, "fail to create check")
@@ -113,12 +118,12 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	transformResult, err := t.Transform(ctx, uid)
 
 	if err != nil {
-		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID)
+		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID, nil)
 		return errors.Wrap(err, "fail to transform compose into cluster env")
 	}
 
 	if transformResult.Failed() {
-		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID)
+		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID, nil)
 		return nil
 	}
 
@@ -135,13 +140,13 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 			return nil
 		}
 
-		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID)
+		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID, nil)
 		return errors.Wrap(err, "fail to check if env should still be launched")
 	}
 
 	err = cluster.Deploy(ctx, r.clusterClient, transformResult.ClusterEnv)
 	if err != nil {
-		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID)
+		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID, nil)
 		return errors.Wrap(err, "fail to deploy cluster env to cluster")
 	}
 
@@ -149,7 +154,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	defer cancel()
 	err = r.clusterClient.WaitDeployments(deploymentsCtx, transformResult.ClusterEnv.Namespace)
 	if err != nil {
-		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID)
+		r.failRun(ctx, envFrontendLink, event, prepare.Environment, previousCommentID, nil)
 		return errors.Wrap(err, "fail to wait for deployments")
 	}
 
@@ -163,6 +168,7 @@ func (r *githubRouter) failRun(
 	event *github.PullRequestEvent,
 	env *database.Environment,
 	previousCommentID int64,
+	validationError transformer.ProjectValidationError,
 ) {
 	log := logger.Ctx(ctx)
 	owner := event.GetRepo().GetOwner().GetLogin()
@@ -170,7 +176,8 @@ func (r *githubRouter) failRun(
 	pr := event.GetPullRequest().GetNumber()
 	sha := event.GetPullRequest().GetHead().GetSHA()
 
-	comment := createFailureComment(envFrontendLink)
+	comment := createFailureComment(envFrontendLink, validationError)
+
 	ghComment, err := r.ghApp.UpsertComment(ctx, owner, repo, pr, previousCommentID, comment)
 	if err != nil {
 		log.Err(err).Msg("fail to post failure comment")

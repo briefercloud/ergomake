@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,22 +23,27 @@ const (
 )
 
 type Environment struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
-	Owner       string
-	BranchOwner string
-	Repo        string
-	Branch      sql.NullString
-	PullRequest sql.NullInt32
-	Author      string
-	Status      EnvStatus
-	Services    []Service `gorm:"foreignKey:EnvironmentID"`
-	GHCommentID int64     `gorm:"column:gh_comment_id"`
+	ID             uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      gorm.DeletedAt `gorm:"index"`
+	Owner          string
+	BranchOwner    string
+	Repo           string
+	Branch         sql.NullString
+	PullRequest    sql.NullInt32
+	Author         string
+	Status         EnvStatus
+	DegradedReason json.RawMessage `gorm:"type:jsonb"`
+	Services       []Service       `gorm:"foreignKey:EnvironmentID"`
+	GHCommentID    int64           `gorm:"column:gh_comment_id"`
 }
 
-func NewEnvironment(ID uuid.UUID, owner, branchOwner, repo, branch string, pullRequest int, author string, status EnvStatus) *Environment {
+func NewEnvironment(
+	ID uuid.UUID,
+	owner, branchOwner, repo, branch string,
+	pullRequest int, author string, status EnvStatus,
+) *Environment {
 	return &Environment{
 		ID:          ID,
 		Owner:       owner,

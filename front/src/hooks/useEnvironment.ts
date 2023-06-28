@@ -18,6 +18,10 @@ export type EnvironmentService = {
   build: string
 }
 
+export type DegradedReason = {
+  type: 'compose-not-found'
+}
+
 export type Environment = {
   id: string
   branch: string
@@ -25,6 +29,7 @@ export type Environment = {
   status: EnvironmentStatus
   services: EnvironmentService[]
   createdAt: string
+  degradedReason: DegradedReason | null
 }
 
 export const useEnvironment = (

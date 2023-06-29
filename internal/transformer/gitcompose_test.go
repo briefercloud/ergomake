@@ -47,14 +47,14 @@ func TestGitCompose_Prepare(t *testing.T) {
 				clusterClient := clusterMock.NewClient(t)
 				db := testutils.CreateRandomDB(t)
 				gitClient := gitMock.NewRemoteGitClient(t)
-				gitClient.EXPECT().CloneRepo(ctx, "owner", "repo", "branch", mock.AnythingOfType("string")).
+				gitClient.EXPECT().CloneRepo(ctx, "owner", "repo", "branch", mock.AnythingOfType("string"), false).
 					Return(errors.New("rip"))
 
 				return NewGitCompose(
 					clusterClient, gitClient, db,
 					envvarsMocks.NewEnvVarsProvider(t),
 					privregistryMock.NewPrivRegistryProvider(t),
-					"owner", "owner", "repo", "branch", "sha", 1337, "author",
+					"owner", "owner", "repo", "branch", "sha", 1337, "author", true,
 				)
 			},
 		},
@@ -132,7 +132,7 @@ func TestGitCompose_Transform(t *testing.T) {
 				gc := NewGitCompose(
 					clusterClient, gitClient, db, envVarsProvider,
 					privRegistryProvider,
-					"owner", "owner", "repo", "branch", "sha", 1337, "author",
+					"owner", "owner", "repo", "branch", "sha", 1337, "author", true,
 				)
 				gc.komposeObject = &kobject.KomposeObject{
 					ServiceConfigs: map[string]kobject.ServiceConfig{
@@ -186,8 +186,8 @@ func TestGitCompose_loadComposeObject(t *testing.T) {
 			setup: func(t *testing.T) *gitCompose {
 				clusterClient := clusterMock.NewClient(t)
 				gitClient := gitMock.NewRemoteGitClient(t)
-				gitClient.EXPECT().CloneRepo(ctx, "owner", repo, "branch", mock.AnythingOfType("string")).
-					Run(func(_ context.Context, _, _, _, dir string) {
+				gitClient.EXPECT().CloneRepo(ctx, "owner", repo, "branch", mock.AnythingOfType("string"), false).
+					Run(func(_ context.Context, _, _, _, dir string, _ bool) {
 
 						composeContent := `
 version: '3.5'
@@ -205,7 +205,7 @@ services:
 					clusterClient, gitClient, &database.DB{},
 					envvarsMocks.NewEnvVarsProvider(t),
 					privregistryMock.NewPrivRegistryProvider(t),
-					"owner", "owner", repo, "branch", "sha", 1337, "author",
+					"owner", "owner", repo, "branch", "sha", 1337, "author", true,
 				)
 			},
 			namespace: "delete-repo",
@@ -318,7 +318,7 @@ services:
 				clusterClient, gitClient, &database.DB{},
 				envvarsMocks.NewEnvVarsProvider(t),
 				privregistryMock.NewPrivRegistryProvider(t),
-				"owner", "owner", "repo", "branch", "sha", 1337, "author",
+				"owner", "owner", "repo", "branch", "sha", 1337, "author", true,
 			)
 			env := gc.makeEnvironmentFromServices(tc.services, tc.rawCompose)
 

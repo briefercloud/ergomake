@@ -55,13 +55,17 @@ func (gh *ghAppClient) GetCloneToken(ctx context.Context, owner string, repo str
 	return gh.getOwnerInstallationToken(ctx, owner)
 }
 
-func (gh *ghAppClient) CloneRepo(ctx context.Context, owner string, repo string, branch string, dir string) error {
-	token, err := gh.GetCloneToken(ctx, owner, repo)
-	if err != nil {
-		return errors.Wrap(err, "fail to get clone token")
+func (gh *ghAppClient) CloneRepo(ctx context.Context, owner string, repo string, branch string, dir string, isPublic bool) error {
+	cloneURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
+	if !isPublic {
+		token, err := gh.GetCloneToken(ctx, owner, repo)
+		if err != nil {
+			return errors.Wrap(err, "fail to get clone token")
+		}
+
+		cloneURL = fmt.Sprintf("https://x-access-token:%s@github.com/%s/%s.git", token, owner, repo)
 	}
 
-	cloneURL := fmt.Sprintf("https://x-access-token:%s@github.com/%s/%s.git", token, owner, repo)
 	cmd := exec.Command("git", "clone", "--branch", branch, cloneURL, dir)
 
 	return errors.Wrap(cmd.Run(), "fail to run clone command")

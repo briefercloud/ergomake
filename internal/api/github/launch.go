@@ -75,7 +75,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	envFrontendLink := fmt.Sprintf("%s/gh/%s/repos/%s/envs/%s", r.frontendURL, owner, repoName, uid)
 
 	if isLimited {
-		err := r.ghApp.CreateCommitStatus(ctx, branchOwner, repoName, sha, "failure", github.String(envFrontendLink))
+		err := r.ghApp.CreateCommitStatus(ctx, owner, repoName, sha, "failure", github.String(envFrontendLink))
 		if err != nil {
 			logger.Ctx(ctx).Err(err).Str("conclusion", "failure").Msg("fail to create commit status for limited env")
 		}
@@ -112,9 +112,9 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		return nil
 	}
 
-	err = r.ghApp.CreateCommitStatus(ctx, branchOwner, repoName, sha, "pending", github.String(envFrontendLink))
+	err = r.ghApp.CreateCommitStatus(ctx, owner, repoName, sha, "pending", github.String(envFrontendLink))
 	if err != nil {
-		return errors.Wrap(err, "fail to create check")
+		return errors.Wrap(err, "fail to create commit status")
 	}
 
 	transformResult, err := t.Transform(ctx, uid)
@@ -135,7 +135,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	_, err = r.db.FindEnvironmentByID(uid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			err = r.ghApp.CreateCommitStatus(ctx, branchOwner, repoName, sha, "failure", nil)
+			err = r.ghApp.CreateCommitStatus(ctx, owner, repoName, sha, "failure", nil)
 			if err != nil {
 				logger.Ctx(ctx).Err(err).Str("conclusion", "failure").Msg("fail to create commit status")
 			}

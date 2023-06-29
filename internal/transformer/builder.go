@@ -306,9 +306,10 @@ func (c *gitCompose) makeInitContainer(
 	}
 
 	return corev1.Container{
-		Name:    "git-clone",
-		Image:   "alpine/git",
-		Command: cmd,
+		Name:            "git-clone",
+		Image:           "alpine/git",
+		Command:         cmd,
+		ImagePullPolicy: "IfNotPresent",
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      "workspace",

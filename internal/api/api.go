@@ -49,6 +49,7 @@ type Config struct {
 	IngressServiceName              string   `split_words:"true"`
 	Friends                         []string `split_words:"true"`
 	BestFriends                     []string `split_words:"true"`
+	DockerhubPullSecretName         string   `split_words:"true"`
 }
 
 type server struct {
@@ -106,6 +107,7 @@ func NewServer(
 		paymentProvider,
 		cfg.GithubWebhookSecret,
 		cfg.FrontendURL,
+		cfg.DockerhubPullSecretName,
 	)
 	ghRouter.AddRoutes(v2.Group("/github"))
 

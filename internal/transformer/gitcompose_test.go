@@ -54,7 +54,7 @@ func TestGitCompose_Prepare(t *testing.T) {
 					clusterClient, gitClient, db,
 					envvarsMocks.NewEnvVarsProvider(t),
 					privregistryMock.NewPrivRegistryProvider(t),
-					"owner", "owner", "repo", "branch", "sha", 1337, "author", true,
+					"owner", "owner", "repo", "branch", "sha", 1337, "author", true, "hub-secret",
 				)
 			},
 		},
@@ -132,7 +132,7 @@ func TestGitCompose_Transform(t *testing.T) {
 				gc := NewGitCompose(
 					clusterClient, gitClient, db, envVarsProvider,
 					privRegistryProvider,
-					"owner", "owner", "repo", "branch", "sha", 1337, "author", true,
+					"owner", "owner", "repo", "branch", "sha", 1337, "author", true, "hub-secret",
 				)
 				gc.komposeObject = &kobject.KomposeObject{
 					ServiceConfigs: map[string]kobject.ServiceConfig{
@@ -205,7 +205,7 @@ services:
 					clusterClient, gitClient, &database.DB{},
 					envvarsMocks.NewEnvVarsProvider(t),
 					privregistryMock.NewPrivRegistryProvider(t),
-					"owner", "owner", repo, "branch", "sha", 1337, "author", true,
+					"owner", "owner", repo, "branch", "sha", 1337, "author", true, "hub-secret",
 				)
 			},
 			namespace: "delete-repo",
@@ -318,7 +318,7 @@ services:
 				clusterClient, gitClient, &database.DB{},
 				envvarsMocks.NewEnvVarsProvider(t),
 				privregistryMock.NewPrivRegistryProvider(t),
-				"owner", "owner", "repo", "branch", "sha", 1337, "author", true,
+				"owner", "owner", "repo", "branch", "sha", 1337, "author", true, "hub-secret",
 			)
 			env := gc.makeEnvironmentFromServices(tc.services, tc.rawCompose)
 

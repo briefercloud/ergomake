@@ -22,6 +22,8 @@ type githubRouter struct {
 	paymentProvider      payment.PaymentProvider
 	webhookSecret        string
 	frontendURL          string
+
+	dockerhubPullSecretName string
 }
 
 func NewGithubRouter(
@@ -34,6 +36,7 @@ func NewGithubRouter(
 	paymentProvider payment.PaymentProvider,
 	webhookSecret string,
 	frontendURL string,
+	dockerhubPullSecretName string,
 ) *githubRouter {
 	return &githubRouter{
 		db,
@@ -45,6 +48,7 @@ func NewGithubRouter(
 		paymentProvider,
 		webhookSecret,
 		frontendURL,
+		dockerhubPullSecretName,
 	}
 }
 

@@ -129,7 +129,7 @@ func (c *gitCompose) buildImages(
 func makeCloneTokenSecret(namespace, repo, token string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      strings.ToLower(fmt.Sprintf("%s-%s", repo, namespace)),
+			Name:      strings.ReplaceAll(strings.ToLower(fmt.Sprintf("%s-%s", repo, namespace)), "_", ""),
 			Namespace: "preview-builds",
 		},
 		Data: map[string][]byte{

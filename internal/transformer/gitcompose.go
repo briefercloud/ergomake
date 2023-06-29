@@ -288,7 +288,7 @@ func (c *gitCompose) getUrl(service kobject.ServiceConfig) string {
 				"%s-%s-%s-%d.%s",
 				service.Name,
 				c.owner,
-				c.repo,
+				strings.ReplaceAll(c.repo, "_", ""),
 				c.prNumber,
 				clusterDomain,
 			))

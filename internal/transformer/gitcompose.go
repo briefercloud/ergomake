@@ -91,7 +91,7 @@ type gitCompose struct {
 	sha         string
 	prNumber    int
 	author      string
-	needsToken  bool
+	isPublic    bool
 
 	projectPath   string
 	composePath   string
@@ -117,7 +117,7 @@ func NewGitCompose(
 	sha string,
 	prNumber int,
 	author string,
-	needsToken bool,
+	isPublic bool,
 	dockerhubPullSecretName string,
 ) *gitCompose {
 	return &gitCompose{
@@ -133,7 +133,7 @@ func NewGitCompose(
 		sha:                     sha,
 		prNumber:                prNumber,
 		author:                  author,
-		needsToken:              needsToken,
+		isPublic:                isPublic,
 		dockerhubPullSecretName: dockerhubPullSecretName,
 	}
 }
@@ -450,7 +450,7 @@ func (c *gitCompose) cloneRepo(ctx context.Context, namespace string) (string, e
 		return "", errors.Wrap(err, "fail to make inner dir inside temp dir")
 	}
 
-	err = c.gitClient.CloneRepo(ctx, c.branchOwner, c.repo, c.branch, dir, !c.needsToken)
+	err = c.gitClient.CloneRepo(ctx, c.branchOwner, c.repo, c.branch, dir, c.isPublic)
 
 	return dir, errors.Wrap(err, "fail to clone from github")
 }

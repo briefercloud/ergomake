@@ -9,6 +9,6 @@ type RemoteGitClient interface {
 	CloneRepo(ctx context.Context, owner string, repo string, branch string, dir string, isPublic bool) error
 	GetCloneUrl() string
 	GetCloneParams() []string
-	GetDefaultBranch(ctx context.Context, owner string, repo string) (string, error)
-	DoesBranchExist(ctx context.Context, owner string, repo string, branch string) (bool, error)
+	GetDefaultBranch(ctx context.Context, owner string, repo string, isPublic bool) (string, error)
+	DoesBranchExist(ctx context.Context, owner string, repo string, branch string, isPublic bool) (bool, error)
 }

@@ -70,7 +70,7 @@ func (c *gitCompose) buildImages(
 		repo, buildPath := c.computeRepoAndBuildPath(service.Build, c.repo)
 
 		cloneTokenSecretName, ok := cloneTokenSecrets[repo]
-		if !ok && c.needsToken {
+		if !ok && !c.isPublic {
 			cloneToken, err := c.gitClient.GetCloneToken(ctx, c.branchOwner, repo)
 			if err != nil {
 				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", c.branchOwner, repo)
@@ -87,12 +87,12 @@ func (c *gitCompose) buildImages(
 		}
 
 		branch := c.branch
-		branchExists, err := c.gitClient.DoesBranchExist(ctx, c.branchOwner, repo, branch)
+		branchExists, err := c.gitClient.DoesBranchExist(ctx, c.branchOwner, repo, branch, c.isPublic)
 		if err != nil {
 			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, c.branchOwner, repo)
 		}
 		if !branchExists {
-			defaultBranch, err := c.gitClient.GetDefaultBranch(ctx, c.branchOwner, repo)
+			defaultBranch, err := c.gitClient.GetDefaultBranch(ctx, c.branchOwner, repo, c.isPublic)
 			if err != nil {
 				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", c.branchOwner, repo)
 			}

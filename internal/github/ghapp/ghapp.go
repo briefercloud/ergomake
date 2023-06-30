@@ -82,13 +82,17 @@ func (gh *ghAppClient) GetCloneParams() []string {
 	}
 }
 
-func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo string) (string, error) {
-	installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to create installation client")
+func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo string, isPublic bool) (string, error) {
+	client := gh.Client
+	if !isPublic {
+		installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to create installation client")
+		}
+		client = installationClient
 	}
 
-	repository, resp, err := installationClient.Repositories.Get(ctx, owner, repo)
+	repository, resp, err := client.Repositories.Get(ctx, owner, repo)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return "", repoNotFoundError
@@ -99,13 +103,17 @@ func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo 
 	return repository.GetDefaultBranch(), nil
 }
 
-func (gh *ghAppClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string) (bool, error) {
-	installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to create installation client")
+func (gh *ghAppClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string, isPublic bool) (bool, error) {
+	client := gh.Client
+	if !isPublic {
+		installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to create installation client")
+		}
+		client = installationClient
 	}
 
-	_, resp, err := installationClient.Repositories.GetBranch(ctx, owner, repo, branch, true)
+	_, resp, err := client.Repositories.GetBranch(ctx, owner, repo, branch, true)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return false, nil

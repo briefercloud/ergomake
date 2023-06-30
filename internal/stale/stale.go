@@ -318,6 +318,14 @@ func (s *server) MonitorStaleServices(ctx context.Context) {
 			env.Status = database.EnvStale
 
 			for _, svc := range env.Services {
+				err = s.clusterClient.ScaleDeployment(ctx, ns, svc.Name, 0)
+				if err != nil {
+					logger.Ctx(ctx).Err(err).Str("service", svc.Name).Str("env", ns).
+						Msg("fail to scale down deployment to stale environment")
+					env.Status = database.EnvDegraded
+					break
+				}
+
 				ingress, err := s.clusterClient.GetIngress(ctx, ns, svc.Name)
 				if err != nil && !errors.Is(err, cluster.ErrIngressNotFound) {
 					logger.Ctx(ctx).Err(err).Str("service", svc.Name).Str("env", ns).
@@ -334,14 +342,6 @@ func (s *server) MonitorStaleServices(ctx context.Context) {
 				if err != nil {
 					logger.Ctx(ctx).Err(err).Str("service", svc.Name).Str("env", ns).Msg("fail to update ingress to stale environment")
 					continue outer
-				}
-
-				err = s.clusterClient.ScaleDeployment(ctx, ns, svc.Name, 0)
-				if err != nil {
-					logger.Ctx(ctx).Err(err).Str("service", svc.Name).Str("env", ns).
-						Msg("fail to scale down deployment to stale environment")
-					env.Status = database.EnvDegraded
-					break
 				}
 			}
 

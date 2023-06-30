@@ -82,13 +82,13 @@ func (gh *ghAppClient) GetCloneParams() []string {
 	}
 }
 
-func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo string) (string, error) {
+func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo string, branchOwner string) (string, error) {
 	installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create installation client")
 	}
 
-	repository, resp, err := installationClient.Repositories.Get(ctx, owner, repo)
+	repository, resp, err := installationClient.Repositories.Get(ctx, branchOwner, repo)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return "", repoNotFoundError
@@ -99,13 +99,13 @@ func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo 
 	return repository.GetDefaultBranch(), nil
 }
 
-func (gh *ghAppClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string) (bool, error) {
+func (gh *ghAppClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string, branchOwner string) (bool, error) {
 	installationClient, err := gh.getOwnerInstallationClient(ctx, owner)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to create installation client")
 	}
 
-	_, resp, err := installationClient.Repositories.GetBranch(ctx, owner, repo, branch, true)
+	_, resp, err := installationClient.Repositories.GetBranch(ctx, branchOwner, repo, branch, true)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return false, nil

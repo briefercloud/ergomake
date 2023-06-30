@@ -63,7 +63,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		sha,
 		prNumber,
 		event.GetPullRequest().GetUser().GetLogin(),
-		repo.GetPrivate(),
+		!repo.GetPrivate(),
 		r.dockerhubPullSecretName,
 	)
 	defer t.Cleanup()

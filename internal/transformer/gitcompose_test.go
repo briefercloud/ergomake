@@ -47,7 +47,7 @@ func TestGitCompose_Prepare(t *testing.T) {
 				clusterClient := clusterMock.NewClient(t)
 				db := testutils.CreateRandomDB(t)
 				gitClient := gitMock.NewRemoteGitClient(t)
-				gitClient.EXPECT().CloneRepo(ctx, "owner", "repo", "branch", mock.AnythingOfType("string"), false).
+				gitClient.EXPECT().CloneRepo(ctx, "owner", "repo", "branch", mock.AnythingOfType("string"), true).
 					Return(errors.New("rip"))
 
 				return NewGitCompose(
@@ -95,7 +95,7 @@ func TestGitCompose_Transform(t *testing.T) {
 				gitClient := gitMock.NewRemoteGitClient(t)
 
 				gitClient.EXPECT().GetCloneToken(mock.Anything, "owner", "repo").Return("token", nil)
-				gitClient.EXPECT().DoesBranchExist(mock.Anything, "owner", "repo", "branch").Return(true, nil)
+				gitClient.EXPECT().DoesBranchExist(mock.Anything, "owner", "repo", "branch", "owner").Return(true, nil)
 				gitClient.EXPECT().GetCloneUrl().Return("")
 				gitClient.EXPECT().GetCloneParams().Return([]string{})
 				clusterClient.EXPECT().CreateSecret(
@@ -132,7 +132,7 @@ func TestGitCompose_Transform(t *testing.T) {
 				gc := NewGitCompose(
 					clusterClient, gitClient, db, envVarsProvider,
 					privRegistryProvider,
-					"owner", "owner", "repo", "branch", "sha", 1337, "author", true, "hub-secret",
+					"owner", "owner", "repo", "branch", "sha", 1337, "author", false, "hub-secret",
 				)
 				gc.komposeObject = &kobject.KomposeObject{
 					ServiceConfigs: map[string]kobject.ServiceConfig{
@@ -186,7 +186,7 @@ func TestGitCompose_loadComposeObject(t *testing.T) {
 			setup: func(t *testing.T) *gitCompose {
 				clusterClient := clusterMock.NewClient(t)
 				gitClient := gitMock.NewRemoteGitClient(t)
-				gitClient.EXPECT().CloneRepo(ctx, "owner", repo, "branch", mock.AnythingOfType("string"), false).
+				gitClient.EXPECT().CloneRepo(ctx, "owner", repo, "branch", mock.AnythingOfType("string"), true).
 					Run(func(_ context.Context, _, _, _, dir string, _ bool) {
 
 						composeContent := `

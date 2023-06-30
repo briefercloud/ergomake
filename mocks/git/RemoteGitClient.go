@@ -68,23 +68,23 @@ func (_c *RemoteGitClient_CloneRepo_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
-// DoesBranchExist provides a mock function with given fields: ctx, owner, repo, branch
-func (_m *RemoteGitClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string) (bool, error) {
-	ret := _m.Called(ctx, owner, repo, branch)
+// DoesBranchExist provides a mock function with given fields: ctx, owner, repo, branch, branchOwner
+func (_m *RemoteGitClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string, branchOwner string) (bool, error) {
+	ret := _m.Called(ctx, owner, repo, branch, branchOwner)
 
 	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (bool, error)); ok {
-		return rf(ctx, owner, repo, branch)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string) (bool, error)); ok {
+		return rf(ctx, owner, repo, branch, branchOwner)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) bool); ok {
-		r0 = rf(ctx, owner, repo, branch)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string) bool); ok {
+		r0 = rf(ctx, owner, repo, branch, branchOwner)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
-		r1 = rf(ctx, owner, repo, branch)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, string) error); ok {
+		r1 = rf(ctx, owner, repo, branch, branchOwner)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -102,13 +102,14 @@ type RemoteGitClient_DoesBranchExist_Call struct {
 //   - owner string
 //   - repo string
 //   - branch string
-func (_e *RemoteGitClient_Expecter) DoesBranchExist(ctx interface{}, owner interface{}, repo interface{}, branch interface{}) *RemoteGitClient_DoesBranchExist_Call {
-	return &RemoteGitClient_DoesBranchExist_Call{Call: _e.mock.On("DoesBranchExist", ctx, owner, repo, branch)}
+//   - branchOwner string
+func (_e *RemoteGitClient_Expecter) DoesBranchExist(ctx interface{}, owner interface{}, repo interface{}, branch interface{}, branchOwner interface{}) *RemoteGitClient_DoesBranchExist_Call {
+	return &RemoteGitClient_DoesBranchExist_Call{Call: _e.mock.On("DoesBranchExist", ctx, owner, repo, branch, branchOwner)}
 }
 
-func (_c *RemoteGitClient_DoesBranchExist_Call) Run(run func(ctx context.Context, owner string, repo string, branch string)) *RemoteGitClient_DoesBranchExist_Call {
+func (_c *RemoteGitClient_DoesBranchExist_Call) Run(run func(ctx context.Context, owner string, repo string, branch string, branchOwner string)) *RemoteGitClient_DoesBranchExist_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -118,7 +119,7 @@ func (_c *RemoteGitClient_DoesBranchExist_Call) Return(_a0 bool, _a1 error) *Rem
 	return _c
 }
 
-func (_c *RemoteGitClient_DoesBranchExist_Call) RunAndReturn(run func(context.Context, string, string, string) (bool, error)) *RemoteGitClient_DoesBranchExist_Call {
+func (_c *RemoteGitClient_DoesBranchExist_Call) RunAndReturn(run func(context.Context, string, string, string, string) (bool, error)) *RemoteGitClient_DoesBranchExist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -261,23 +262,23 @@ func (_c *RemoteGitClient_GetCloneUrl_Call) RunAndReturn(run func() string) *Rem
 	return _c
 }
 
-// GetDefaultBranch provides a mock function with given fields: ctx, owner, repo
-func (_m *RemoteGitClient) GetDefaultBranch(ctx context.Context, owner string, repo string) (string, error) {
-	ret := _m.Called(ctx, owner, repo)
+// GetDefaultBranch provides a mock function with given fields: ctx, owner, repo, branchOwner
+func (_m *RemoteGitClient) GetDefaultBranch(ctx context.Context, owner string, repo string, branchOwner string) (string, error) {
+	ret := _m.Called(ctx, owner, repo, branchOwner)
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (string, error)); ok {
-		return rf(ctx, owner, repo)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
+		return rf(ctx, owner, repo, branchOwner)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
-		r0 = rf(ctx, owner, repo)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
+		r0 = rf(ctx, owner, repo, branchOwner)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, owner, repo)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, owner, repo, branchOwner)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -294,13 +295,14 @@ type RemoteGitClient_GetDefaultBranch_Call struct {
 //   - ctx context.Context
 //   - owner string
 //   - repo string
-func (_e *RemoteGitClient_Expecter) GetDefaultBranch(ctx interface{}, owner interface{}, repo interface{}) *RemoteGitClient_GetDefaultBranch_Call {
-	return &RemoteGitClient_GetDefaultBranch_Call{Call: _e.mock.On("GetDefaultBranch", ctx, owner, repo)}
+//   - branchOwner string
+func (_e *RemoteGitClient_Expecter) GetDefaultBranch(ctx interface{}, owner interface{}, repo interface{}, branchOwner interface{}) *RemoteGitClient_GetDefaultBranch_Call {
+	return &RemoteGitClient_GetDefaultBranch_Call{Call: _e.mock.On("GetDefaultBranch", ctx, owner, repo, branchOwner)}
 }
 
-func (_c *RemoteGitClient_GetDefaultBranch_Call) Run(run func(ctx context.Context, owner string, repo string)) *RemoteGitClient_GetDefaultBranch_Call {
+func (_c *RemoteGitClient_GetDefaultBranch_Call) Run(run func(ctx context.Context, owner string, repo string, branchOwner string)) *RemoteGitClient_GetDefaultBranch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
 	})
 	return _c
 }
@@ -310,7 +312,7 @@ func (_c *RemoteGitClient_GetDefaultBranch_Call) Return(_a0 string, _a1 error) *
 	return _c
 }
 
-func (_c *RemoteGitClient_GetDefaultBranch_Call) RunAndReturn(run func(context.Context, string, string) (string, error)) *RemoteGitClient_GetDefaultBranch_Call {
+func (_c *RemoteGitClient_GetDefaultBranch_Call) RunAndReturn(run func(context.Context, string, string, string) (string, error)) *RemoteGitClient_GetDefaultBranch_Call {
 	_c.Call.Return(run)
 	return _c
 }

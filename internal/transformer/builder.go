@@ -205,6 +205,7 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 					Annotations: labels,
 				},
 				Spec: corev1.PodSpec{
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: c.dockerhubPullSecretName}},
 					Containers: []corev1.Container{
 						{
 							Name:  serviceID,

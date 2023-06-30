@@ -100,7 +100,8 @@ type gitCompose struct {
 	compose       *Compose
 	cleanup       func()
 
-	prepared bool
+	prepared                bool
+	dockerhubPullSecretName string
 }
 
 func NewGitCompose(
@@ -117,21 +118,23 @@ func NewGitCompose(
 	prNumber int,
 	author string,
 	needsToken bool,
+	dockerhubPullSecretName string,
 ) *gitCompose {
 	return &gitCompose{
-		clusterClient:        clusterClient,
-		gitClient:            gitClient,
-		db:                   db,
-		envVarsProvider:      envVarsProvider,
-		privRegistryProvider: privRegistryProvider,
-		owner:                owner,
-		branchOwner:          branchOwner,
-		repo:                 repo,
-		branch:               branch,
-		sha:                  sha,
-		prNumber:             prNumber,
-		author:               author,
-		needsToken:           needsToken,
+		clusterClient:           clusterClient,
+		gitClient:               gitClient,
+		db:                      db,
+		envVarsProvider:         envVarsProvider,
+		privRegistryProvider:    privRegistryProvider,
+		owner:                   owner,
+		branchOwner:             branchOwner,
+		repo:                    repo,
+		branch:                  branch,
+		sha:                     sha,
+		prNumber:                prNumber,
+		author:                  author,
+		needsToken:              needsToken,
+		dockerhubPullSecretName: dockerhubPullSecretName,
 	}
 }
 

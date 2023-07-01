@@ -171,7 +171,7 @@ func (r *githubRouter) failRun(
 	event *github.PullRequestEvent,
 	env *database.Environment,
 	previousCommentID int64,
-	validationError transformer.ProjectValidationError,
+	validationError *transformer.ProjectValidationError,
 ) {
 	log := logger.Ctx(ctx)
 	owner := event.GetRepo().GetOwner().GetLogin()

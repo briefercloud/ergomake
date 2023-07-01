@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
+
 	"github.com/ergomake/ergomake/internal/database"
 )
 
@@ -15,4 +17,6 @@ type EnvironmentsProvider interface {
 	SaveEnvironment(ctx context.Context, env *database.Environment) error
 	ListSuccessEnvironments(ctx context.Context) ([]*database.Environment, error)
 	ShouldDeploy(ctx context.Context, owner string, repo string, branch string) (bool, error)
+	ListEnvironmentsByBranch(ctx context.Context, owner, repo, branch string) ([]*database.Environment, error)
+	DeleteEnvironment(ctx context.Context, id uuid.UUID) error
 }

@@ -38,12 +38,22 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *LaunchEnvir
 			database.FindEnvironmentsByPullRequestOptions{IncludeDeleted: true},
 		)
 		if err != nil {
-			return errors.Wrap(err, "fail to find previous envs")
+			return errors.Wrap(err, "fail to find previous envs of pull request")
 		}
 		previousEnvs = envs
 	} else {
-		// TODO: search just by branch
-		previousEnvs = make([]database.Environment, 0)
+		envs, err := r.environmentsProvider.ListEnvironmentsByBranch(ctx, event.owner, event.repo, event.branch)
+		if err != nil {
+			return errors.Wrap(err, "fail to find previous envs of branch")
+		}
+
+		for _, env := range envs {
+			if env.PullRequest.Valid {
+				continue
+			}
+
+			previousEnvs = append(previousEnvs, *env)
+		}
 	}
 
 	previousCommentID := int64(0)

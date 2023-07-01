@@ -144,13 +144,42 @@ func (ep *dbEnvironmentsProvider) ShouldDeploy(ctx context.Context, owner string
 		},
 	).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, nil
-	}
-
 	if err != nil {
-		return false, errors.Wrap(err, "fail to query for deployed branches")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+
+		return false, err
 	}
 
 	return true, nil
+}
+
+func (ep *dbEnvironmentsProvider) ListEnvironmentsByBranch(
+	ctx context.Context,
+	owner, repo, branch string,
+) ([]*database.Environment, error) {
+	envs := make([]*database.Environment, 0)
+
+	err := ep.db.Table("environments").
+		Preload("Services", func(db *gorm.DB) *gorm.DB {
+			return db.Order("services.index ASC")
+		}).
+		Find(&envs, map[string]string{
+			"owner":  owner,
+			"repo":   repo,
+			"branch": branch,
+		}).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return envs, nil
+		}
+	}
+
+	return envs, err
+}
+
+func (ep *dbEnvironmentsProvider) DeleteEnvironment(ctx context.Context, id uuid.UUID) error {
+	return ep.db.Table("environments").Delete(&database.Environment{ID: id}).Error
 }

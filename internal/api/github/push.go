@@ -30,6 +30,13 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 	log := &logCtx
 	ctx := log.WithContext(context.Background())
 
+	if _, blocked := ownersBlockList[owner]; blocked {
+		log.Warn().Msg("event ignored because owner is in block list")
+		return
+	}
+
+	log.Info().Msg("got a push event from github")
+
 	shouldDeploy, err := r.environmentsProvider.ShouldDeploy(ctx, owner, repoName, branch)
 	if err != nil {
 		log.Err(errors.Wrap(err, "fail to check if branch should be deployed")).Msg("fail to handle push event")
@@ -38,6 +45,17 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 
 	if !shouldDeploy {
 		return
+	}
+
+	terminateEnv := &terminateEnvironment{
+		owner:    owner,
+		repo:     repoName,
+		branch:   branch,
+		prNumber: nil,
+	}
+	err = r.terminateEnvironment(ctx, terminateEnv)
+	if err != nil {
+		log.Err(err).Msg("fail to terminate environment")
 	}
 
 	launchEnv := &LaunchEnvironment{

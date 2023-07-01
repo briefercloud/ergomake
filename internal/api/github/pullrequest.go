@@ -37,10 +37,17 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 		return
 	}
 
+	terminateEnv := &terminateEnvironment{
+		owner:    owner,
+		repo:     repoName,
+		branch:   branch,
+		prNumber: github.Int(prNumber),
+	}
+
 	log.Info().Msg("got a pull request event from github")
 	switch action {
 	case "opened", "reopened", "synchronize":
-		err := r.terminateEnvironment(ctx, event)
+		err := r.terminateEnvironment(ctx, terminateEnv)
 		if err != nil {
 			log.Err(err).Msg("fail to terminate environment")
 		}
@@ -61,7 +68,7 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 			log.Err(err).Msg("fail to launch environment")
 		}
 	case "closed":
-		err := r.terminateEnvironment(ctx, event)
+		err := r.terminateEnvironment(ctx, terminateEnv)
 		if err != nil {
 			log.Err(err).Msg("fail to terminate environment")
 		}

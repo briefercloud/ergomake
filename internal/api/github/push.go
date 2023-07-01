@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v52/github"
+	"github.com/pkg/errors"
 
 	"github.com/ergomake/ergomake/internal/logger"
 )
@@ -24,9 +25,20 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 		Str("author", author).
 		Str("branch", branch).
 		Str("SHA", sha).
+		Str("event", "push").
 		Logger()
 	log := &logCtx
 	ctx := log.WithContext(context.Background())
+
+	shouldDeploy, err := r.environmentsProvider.ShouldDeploy(ctx, owner, repoName, branch)
+	if err != nil {
+		log.Err(errors.Wrap(err, "fail to check if branch should be deployed")).Msg("fail to handle push event")
+		return
+	}
+
+	if !shouldDeploy {
+		return
+	}
 
 	launchEnv := &LaunchEnvironment{
 		owner:       owner,
@@ -39,7 +51,7 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 		isPrivate:   repo.GetPrivate(),
 	}
 
-	err := r.launchEnvironment(ctx, launchEnv)
+	err = r.launchEnvironment(ctx, launchEnv)
 	if err != nil {
 		log.Err(err).Msg("fail to launch environment")
 	}

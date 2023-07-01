@@ -12,7 +12,7 @@ CREATE TABLE private_registries (
 );
 
 -- +migrate Down
-DROP TABLE IF EXISTIS private_registries;
+DROP TABLE IF EXISTS private_registries;
 CREATE TABLE registries (
     id UUID DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),

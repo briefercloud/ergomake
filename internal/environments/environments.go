@@ -14,4 +14,5 @@ type EnvironmentsProvider interface {
 	GetEnvironmentFromHost(ctx context.Context, host string) (*database.Environment, error)
 	SaveEnvironment(ctx context.Context, env *database.Environment) error
 	ListSuccessEnvironments(ctx context.Context) ([]*database.Environment, error)
+	ShouldDeploy(ctx context.Context, owner string, repo string, branch string) (bool, error)
 }

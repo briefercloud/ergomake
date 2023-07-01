@@ -10,4 +10,4 @@ CREATE TABLE stripe_subscriptions (
 );
 
 -- +migrate Down
-DROP TABLE IF EXISTIS stripe_subscriptions;
+DROP TABLE IF EXISTS stripe_subscriptions;

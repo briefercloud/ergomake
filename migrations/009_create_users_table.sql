@@ -12,4 +12,4 @@ CREATE TABLE users (
 );
 
 -- +migrate Down
-DROP TABLE IF EXISTIS users;
+DROP TABLE IF EXISTS users;

@@ -3,6 +3,7 @@ package transformer
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"io/ioutil"
@@ -151,7 +152,7 @@ func (tr *TransformResult) Failed() bool {
 type PrepareResult struct {
 	Environment     *database.Environment
 	Skip            bool
-	ValidationError ProjectValidationError
+	ValidationError *ProjectValidationError
 }
 
 func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult, error) {
@@ -189,7 +190,11 @@ func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult,
 
 	if loadComposeResult.ValidationError != nil {
 		dbEnv.Status = database.EnvDegraded
-		dbEnv.DegradedReason = loadComposeResult.ValidationError.Serialize()
+		dbEnv.DegradedReason, err = json.Marshal(loadComposeResult.ValidationError)
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to marshal validation error")
+		}
+
 		err = c.db.Save(&dbEnv).Error
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to save degraded reason to db")
@@ -345,7 +350,7 @@ func (c *gitCompose) removeUnsupportedVolumes(service *kobject.ServiceConfig) {
 
 type LoadComposeResult struct {
 	Skip            bool
-	ValidationError ProjectValidationError
+	ValidationError *ProjectValidationError
 }
 
 func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (*LoadComposeResult, error) {

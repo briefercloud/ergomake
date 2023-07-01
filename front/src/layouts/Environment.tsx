@@ -4,6 +4,7 @@ import {
 } from '@heroicons/react/24/solid'
 import AnsiToHTML from 'ansi-to-html'
 import React, { useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { Link } from 'react-router-dom'
 
 import Background from '../components/Background'
@@ -12,24 +13,11 @@ import ExternalLinkIcon from '../components/ExternalLinkIcon'
 import Navbar from '../components/Navbar'
 import Pane from '../components/Pane'
 import XCircleIcon from '../components/XCircleIcon'
-import { DegradedReason, Environment } from '../hooks/useEnvironment'
+import { Environment, hasLogs } from '../hooks/useEnvironment'
 import { LogData } from '../hooks/useLogs'
 import { Owner } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { Repo } from '../hooks/useRepo'
-
-function showDegradedReason(degradedReason: DegradedReason): string {
-  try {
-    switch (degradedReason.type) {
-      case 'compose-not-found':
-        return 'Could not find a compose file.'
-      default:
-        return degradedReason.type
-    }
-  } catch (err) {
-    return 'Oops! Something went wrong.'
-  }
-}
 
 const converter = new AnsiToHTML()
 
@@ -154,53 +142,54 @@ function EnvironmentLayout(props: Props) {
         {props.environment.degradedReason && (
           <div className="text-gray-300 p-4 rounded-lg flex space-x-2 items-center justify-center">
             <ExclamationTriangleIcon className="w-6 h-6 inline-block text-yellow-500" />
-            <span>{showDegradedReason(props.environment.degradedReason)}</span>
+            <ReactMarkdown className="prose prose-invert">
+              {props.environment.degradedReason.message}
+            </ReactMarkdown>
           </div>
         )}
 
-        {props.environment.status !== 'limited' &&
-          props.environment.degradedReason?.type !== 'compose-not-found' && (
-            <Pane className="flex mt-8 flex-col">
-              <h2 className="text-white font-bold text-lg mb-8">Logs</h2>
-              <ButtonGroup
-                value={props.logsSwitch}
-                onChange={onChangeLogsSwitch}
-                className="ml-auto bg-black"
-              >
-                <ButtonGroup.Item value="live">Live</ButtonGroup.Item>
-                <ButtonGroup.Item value="build">Build</ButtonGroup.Item>
-              </ButtonGroup>
-              <div className="relative">
-                {showingServices.map((s, i) => {
-                  let className = 'min-w-[100px] py-2 px-4 font-bold'
-                  if (s.id === currentService?.id) {
-                    className +=
-                      ' relative text-primary-500 border-2 border-b-0 rounded-t-xl z-10 bg-black border-outcolor'
-                  } else {
-                    className += ' text-gray-300'
-                  }
+        {hasLogs(props.environment) && (
+          <Pane className="flex mt-8 flex-col">
+            <h2 className="text-white font-bold text-lg mb-8">Logs</h2>
+            <ButtonGroup
+              value={props.logsSwitch}
+              onChange={onChangeLogsSwitch}
+              className="ml-auto bg-black"
+            >
+              <ButtonGroup.Item value="live">Live</ButtonGroup.Item>
+              <ButtonGroup.Item value="build">Build</ButtonGroup.Item>
+            </ButtonGroup>
+            <div className="relative">
+              {showingServices.map((s, i) => {
+                let className = 'min-w-[100px] py-2 px-4 font-bold'
+                if (s.id === currentService?.id) {
+                  className +=
+                    ' relative text-primary-500 border-2 border-b-0 rounded-t-xl z-10 bg-black border-outcolor'
+                } else {
+                  className += ' text-gray-300'
+                }
 
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => props.onChangeService(i)}
-                      className={className}
-                      style={{ marginBottom: -2 }}
-                    >
-                      {s.name}
-                    </button>
-                  )
-                })}
-                <div
-                  className={`h-[42rem] bg-black flex flex-col-reverse border-2 rounded-xl py-2 px-4 border-outcolor overflow-y-auto scrollbar-hide${
-                    props.currentService === 0 ? ' rounded-tl-none' : ''
-                  }`}
-                >
-                  {logs}
-                </div>
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => props.onChangeService(i)}
+                    className={className}
+                    style={{ marginBottom: -2 }}
+                  >
+                    {s.name}
+                  </button>
+                )
+              })}
+              <div
+                className={`h-[42rem] bg-black flex flex-col-reverse border-2 rounded-xl py-2 px-4 border-outcolor overflow-y-auto scrollbar-hide${
+                  props.currentService === 0 ? ' rounded-tl-none' : ''
+                }`}
+              >
+                {logs}
               </div>
-            </Pane>
-          )}
+            </div>
+          </Pane>
+        )}
       </div>
     </Background>
   )

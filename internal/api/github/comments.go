@@ -32,14 +32,14 @@ func getMainServiceUrl(env *transformer.Compose) string {
 	return getServiceUrl(env.FirstService())
 }
 
-func createFailureComment(frontendLink string, validationError transformer.ProjectValidationError) string {
+func createFailureComment(frontendLink string, validationError *transformer.ProjectValidationError) string {
 	reason := fmt.Sprintf(
 		`You can see your environment build logs [here](%s). Please double-check your `+"`docker-compose.yml`"+` file is valid.`,
 		frontendLink,
 	)
 
 	if validationError != nil {
-		reason = validationError.GetErrorMessage()
+		reason = validationError.Message
 	}
 
 	return fmt.Sprintf(`Hi 👋

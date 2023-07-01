@@ -18,9 +18,15 @@ export type EnvironmentService = {
   build: string
 }
 
-export type DegradedReason = {
-  type: 'compose-not-found'
-}
+export type DegradedReason =
+  | {
+      type: 'compose-not-found'
+      message: string
+    }
+  | {
+      type: 'invalid-compose'
+      message: string
+    }
 
 export type Environment = {
   id: string
@@ -30,6 +36,23 @@ export type Environment = {
   services: EnvironmentService[]
   createdAt: string
   degradedReason: DegradedReason | null
+}
+
+export const hasLogs = (env: Environment): boolean => {
+  if (env.status === 'limited') {
+    return false
+  }
+
+  if (env.status === 'degraded') {
+    if (
+      env.degradedReason?.type === 'compose-not-found' ||
+      env.degradedReason?.type === 'invalid-compose'
+    ) {
+      return false
+    }
+  }
+
+  return true
 }
 
 export const useEnvironment = (

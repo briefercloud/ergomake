@@ -30,6 +30,7 @@ type GHAppClient interface {
 	ListOwnerInstalledRepos(ctx context.Context, owner string) ([]*github.Repository, error)
 	IsOwnerInstalled(ctx context.Context, owner string) (bool, error)
 	GetInstallation(ctx context.Context, installationID int64) (*github.Installation, error)
+	ListInstalledOwners(ctx context.Context) ([]string, error)
 }
 
 type ghAppClient struct {
@@ -316,4 +317,30 @@ func (c *ghAppClient) GetInstallation(ctx context.Context, installationID int64)
 	}
 
 	return installation, errors.Wrap(err, "fail to get installation")
+}
+
+func (c *ghAppClient) ListInstalledOwners(ctx context.Context) ([]string, error) {
+	opt := &github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	}
+	var allInstallations []string
+	for {
+		installations, resp, err := c.Apps.ListInstallations(ctx, opt)
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to list installations")
+		}
+
+		for _, installation := range installations {
+			allInstallations = append(allInstallations, installation.GetAccount().GetLogin())
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	return allInstallations, nil
 }

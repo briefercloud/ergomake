@@ -2,7 +2,6 @@ package github
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -57,50 +56,10 @@ func (r *githubRouter) webhook(c *gin.Context) {
 
 	go func() {
 		switch event := event.(type) {
+		case *github.PushEvent:
+			r.handlePushEvent(githubDelivery, event)
 		case *github.PullRequestEvent:
-			action := event.GetAction()
-
-			owner := event.GetRepo().GetOwner().GetLogin()
-			repo := event.GetRepo().GetName()
-			branch := event.GetPullRequest().GetHead().GetRef()
-			sha := event.GetPullRequest().GetHead().GetSHA()
-			prNumber := event.GetPullRequest().GetNumber()
-
-			logCtx := logger.With(log).
-				Str("githubDelivery", githubDelivery).
-				Str("action", action).
-				Str("owner", owner).
-				Str("repo", repo).
-				Int("prNumber", prNumber).
-				Str("author", event.GetSender().GetLogin()).
-				Str("branch", branch).
-				Str("SHA", sha).
-				Logger()
-			log = &logCtx
-			ctx := log.WithContext(context.Background())
-
-			if _, blocked := ownersBlockList[owner]; blocked {
-				log.Warn().Msg("event ignored because owner is in block list")
-				return
-			}
-
-			log.Info().Msg("got a pull request event from github")
-			switch action {
-			case "opened", "reopened", "synchronize":
-				err := r.terminateEnvironment(ctx, event)
-				if err != nil {
-					log.Err(err).Msg("fail to terminate environment")
-				}
-				err = r.launchEnvironment(ctx, event)
-				if err != nil {
-					log.Err(err).Msg("fail to launch environment")
-				}
-			case "closed":
-				err := r.terminateEnvironment(ctx, event)
-				if err != nil {
-					log.Err(err).Msg("fail to terminate environment")
-				}
-			}
+			r.handlePullRequestEvent(githubDelivery, event)
 		}
 	}()
 }

@@ -90,7 +90,7 @@ type gitCompose struct {
 	repo        string
 	branch      string
 	sha         string
-	prNumber    int
+	prNumber    *int
 	author      string
 	isPublic    bool
 
@@ -116,7 +116,7 @@ func NewGitCompose(
 	repo string,
 	branch string,
 	sha string,
-	prNumber int,
+	prNumber *int,
 	author string,
 	isPublic bool,
 	dockerhubPullSecretName string,

@@ -42,8 +42,13 @@ type Environment struct {
 func NewEnvironment(
 	ID uuid.UUID,
 	owner, branchOwner, repo, branch string,
-	pullRequest int, author string, status EnvStatus,
+	pullRequest *int, author string, status EnvStatus,
 ) *Environment {
+	pr := 0
+	if pullRequest != nil {
+		pr = *pullRequest
+	}
+
 	return &Environment{
 		ID:          ID,
 		Owner:       owner,
@@ -54,8 +59,8 @@ func NewEnvironment(
 			Valid:  branch != "",
 		},
 		PullRequest: sql.NullInt32{
-			Int32: int32(pullRequest),
-			Valid: pullRequest != 0,
+			Int32: int32(pr),
+			Valid: pr != 0,
 		},
 		Author: author,
 		Status: status,

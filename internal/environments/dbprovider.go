@@ -21,6 +21,16 @@ type environmentLimits struct {
 	EnvLimit  int
 }
 
+type deployedBranch struct {
+	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	Owner     string         `gorm:"index"`
+	Repo      string         `gorm:"index"`
+	Branch    string         `gorm:"index"`
+}
+
 type dbEnvironmentsProvider struct {
 	db              *database.DB
 	paymentProvider payment.PaymentProvider
@@ -112,4 +122,64 @@ func (ep *dbEnvironmentsProvider) ListSuccessEnvironments(ctx context.Context) (
 	}
 
 	return environments, nil
+}
+
+func (ep *dbEnvironmentsProvider) ShouldDeploy(ctx context.Context, owner string, repo string, branch string) (bool, error) {
+	plan, err := ep.paymentProvider.GetOwnerPlan(ctx, owner)
+	if err != nil {
+		return false, errors.Wrapf(err, "fail to get owner %s plan ", owner)
+	}
+
+	if plan == payment.PaymentPlanFree {
+		return false, nil
+	}
+
+	var deployedBranch deployedBranch
+	err = ep.db.Table("deployed_branches").First(
+		&deployedBranch,
+		map[string]string{
+			"owner":  owner,
+			"repo":   repo,
+			"branch": branch,
+		},
+	).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (ep *dbEnvironmentsProvider) ListEnvironmentsByBranch(
+	ctx context.Context,
+	owner, repo, branch string,
+) ([]*database.Environment, error) {
+	envs := make([]*database.Environment, 0)
+
+	err := ep.db.Table("environments").
+		Preload("Services", func(db *gorm.DB) *gorm.DB {
+			return db.Order("services.index ASC")
+		}).
+		Find(&envs, map[string]string{
+			"owner":  owner,
+			"repo":   repo,
+			"branch": branch,
+		}).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return envs, nil
+		}
+	}
+
+	return envs, err
+}
+
+func (ep *dbEnvironmentsProvider) DeleteEnvironment(ctx context.Context, id uuid.UUID) error {
+	return ep.db.Table("environments").Delete(&database.Environment{ID: id}).Error
 }

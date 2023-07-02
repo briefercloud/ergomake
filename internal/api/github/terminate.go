@@ -3,22 +3,34 @@ package github
 import (
 	"context"
 
-	"github.com/google/go-github/v52/github"
 	"github.com/pkg/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/ergomake/ergomake/internal/database"
 )
 
-func (r *githubRouter) terminateEnvironment(ctx context.Context, event *github.PullRequestEvent) error {
-	owner := event.GetRepo().GetOwner().GetLogin()
-	repo := event.GetPullRequest().GetHead().GetRepo().GetName()
-	branch := event.GetPullRequest().GetHead().GetRef()
-	prNumber := event.GetPullRequest().GetNumber()
+type terminateEnvironment struct {
+	owner    string
+	repo     string
+	branch   string
+	prNumber *int
+}
 
-	envs, err := r.db.FindEnvironmentsByPullRequest(prNumber, owner, repo, branch, database.FindEnvironmentsByPullRequestOptions{})
+func (r *githubRouter) terminateEnvironment(ctx context.Context, event *terminateEnvironment) error {
+	branchEnvs, err := r.environmentsProvider.ListEnvironmentsByBranch(ctx, event.owner, event.repo, event.branch)
 	if err != nil {
-		return errors.Wrap(err, "fail to find environment in DB")
+		return errors.Wrap(err, "fail to list environments by branch")
+	}
+
+	envs := make([]*database.Environment, 0)
+	for _, env := range branchEnvs {
+		if event.prNumber != nil {
+			if env.PullRequest.Valid && env.PullRequest.Int32 == int32(*event.prNumber) {
+				envs = append(envs, env)
+			}
+		} else {
+			envs = append(envs, env)
+		}
 	}
 
 	for _, env := range envs {
@@ -27,8 +39,7 @@ func (r *githubRouter) terminateEnvironment(ctx context.Context, event *github.P
 			return errors.Wrap(err, "fail to delete namespace")
 		}
 
-		err = r.db.DeleteEnvironmentByPullRequest(prNumber, owner, repo, branch)
-
+		err = r.environmentsProvider.DeleteEnvironment(ctx, env.ID)
 		if err != nil {
 			return errors.Wrap(err, "fail to delete environment in DB")
 		}

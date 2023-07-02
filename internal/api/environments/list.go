@@ -49,7 +49,7 @@ func (er *environmentsRouter) list(c *gin.Context) {
 			continue
 		}
 
-		source := "cli"
+		source := "branch"
 		if env.PullRequest.Valid {
 			source = "pr"
 		}

@@ -16,24 +16,44 @@ import (
 	"github.com/ergomake/ergomake/internal/transformer"
 )
 
-func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.PullRequestEvent) error {
-	owner := event.GetRepo().GetOwner().GetLogin()
-	branchOwner := event.GetPullRequest().GetHead().GetRepo().GetOwner().GetLogin()
-	repo := event.GetPullRequest().GetHead().GetRepo()
-	repoName := repo.GetName()
-	branch := event.GetPullRequest().GetHead().GetRef()
-	sha := event.GetPullRequest().GetHead().GetSHA()
-	prNumber := event.GetPullRequest().GetNumber()
+type LaunchEnvironment struct {
+	owner       string
+	branchOwner string
+	repo        string
+	branch      string
+	sha         string
+	prNumber    *int
+	author      string
+	isPrivate   bool
+}
 
-	previousEnvs, err := r.db.FindEnvironmentsByPullRequest(
-		prNumber,
-		owner,
-		repoName,
-		branch,
-		database.FindEnvironmentsByPullRequestOptions{IncludeDeleted: true},
-	)
-	if err != nil {
-		return errors.Wrap(err, "fail to find previous envs")
+func (r *githubRouter) launchEnvironment(ctx context.Context, event *LaunchEnvironment) error {
+	var previousEnvs []database.Environment
+	if event.prNumber != nil {
+		envs, err := r.db.FindEnvironmentsByPullRequest(
+			*event.prNumber,
+			event.owner,
+			event.repo,
+			event.branch,
+			database.FindEnvironmentsByPullRequestOptions{IncludeDeleted: true},
+		)
+		if err != nil {
+			return errors.Wrap(err, "fail to find previous envs of pull request")
+		}
+		previousEnvs = envs
+	} else {
+		envs, err := r.environmentsProvider.ListEnvironmentsByBranch(ctx, event.owner, event.repo, event.branch)
+		if err != nil {
+			return errors.Wrap(err, "fail to find previous envs of branch")
+		}
+
+		for _, env := range envs {
+			if env.PullRequest.Valid {
+				continue
+			}
+
+			previousEnvs = append(previousEnvs, *env)
+		}
 	}
 
 	previousCommentID := int64(0)
@@ -43,7 +63,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		}
 	}
 
-	isLimited, err := r.environmentsProvider.IsOwnerLimited(ctx, owner)
+	isLimited, err := r.environmentsProvider.IsOwnerLimited(ctx, event.owner)
 	if err != nil {
 		return errors.Wrap(err, "fail to check if owner is limited")
 	}
@@ -56,14 +76,14 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		r.db,
 		r.envVarsProvider,
 		r.privRegistryProvider,
-		owner,
-		branchOwner,
-		repoName,
-		branch,
-		sha,
-		prNumber,
-		event.GetPullRequest().GetUser().GetLogin(),
-		!repo.GetPrivate(),
+		event.owner,
+		event.branchOwner,
+		event.repo,
+		event.branch,
+		event.sha,
+		event.prNumber,
+		event.author,
+		!event.isPrivate,
 		r.dockerhubPullSecretName,
 	)
 	defer t.Cleanup()
@@ -73,22 +93,24 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		return errors.Wrap(err, "fail to prepare repo for transform")
 	}
 
-	envFrontendLink := fmt.Sprintf("%s/gh/%s/repos/%s/envs/%s", r.frontendURL, owner, repoName, uid)
+	envFrontendLink := fmt.Sprintf("%s/gh/%s/repos/%s/envs/%s", r.frontendURL, event.owner, event.repo, uid)
 
 	if isLimited {
-		err := r.ghApp.CreateCommitStatus(ctx, owner, repoName, sha, "failure", github.String(envFrontendLink))
+		err := r.ghApp.CreateCommitStatus(ctx, event.owner, event.repo, event.sha, "failure", github.String(envFrontendLink))
 		if err != nil {
 			logger.Ctx(ctx).Err(err).Str("conclusion", "failure").Msg("fail to create commit status for limited env")
 		}
 
 		env := prepare.Environment
 
-		comment := createLimitedComment()
-		ghComment, err := r.ghApp.UpsertComment(ctx, owner, repoName, prNumber, previousCommentID, comment)
-		if err != nil {
-			logger.Ctx(ctx).Err(err).Msg("fail to create gh comment for limited env")
-		} else {
-			env.GHCommentID = ghComment.GetID()
+		if event.prNumber != nil {
+			comment := createLimitedComment()
+			ghComment, err := r.ghApp.UpsertComment(ctx, event.owner, event.repo, *event.prNumber, previousCommentID, comment)
+			if err != nil {
+				logger.Ctx(ctx).Err(err).Msg("fail to create gh comment for limited env")
+			} else {
+				env.GHCommentID = ghComment.GetID()
+			}
 		}
 
 		env.Status = database.EnvLimited
@@ -98,7 +120,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 			return errors.Wrap(err, "fail to save GHCommentID to database for limited env")
 		}
 
-		logger.Ctx(ctx).Info().Str("owner", owner).Str("repo", repoName).Int("pr", prNumber).Msg("owner limited")
+		logger.Ctx(ctx).Info().Msg("owner limited")
 
 		return nil
 	}
@@ -113,7 +135,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 		return nil
 	}
 
-	err = r.ghApp.CreateCommitStatus(ctx, owner, repoName, sha, "pending", github.String(envFrontendLink))
+	err = r.ghApp.CreateCommitStatus(ctx, event.owner, event.repo, event.sha, "pending", github.String(envFrontendLink))
 	if err != nil {
 		return errors.Wrap(err, "fail to create commit status")
 	}
@@ -136,7 +158,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 	_, err = r.db.FindEnvironmentByID(uid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			err = r.ghApp.CreateCommitStatus(ctx, owner, repoName, sha, "failure", nil)
+			err = r.ghApp.CreateCommitStatus(ctx, event.owner, event.repo, event.sha, "failure", nil)
 			if err != nil {
 				logger.Ctx(ctx).Err(err).Str("conclusion", "failure").Msg("fail to create commit status")
 			}
@@ -168,31 +190,28 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *github.Pull
 func (r *githubRouter) failRun(
 	ctx context.Context,
 	envFrontendLink string,
-	event *github.PullRequestEvent,
+	event *LaunchEnvironment,
 	env *database.Environment,
 	previousCommentID int64,
 	validationError *transformer.ProjectValidationError,
 ) {
 	log := logger.Ctx(ctx)
-	owner := event.GetRepo().GetOwner().GetLogin()
-	repo := event.GetRepo().GetName()
-	pr := event.GetPullRequest().GetNumber()
-	sha := event.GetPullRequest().GetHead().GetSHA()
 
-	comment := createFailureComment(envFrontendLink, validationError)
-
-	ghComment, err := r.ghApp.UpsertComment(ctx, owner, repo, pr, previousCommentID, comment)
-	if err != nil {
-		log.Err(err).Msg("fail to post failure comment")
-	} else {
-		env.GHCommentID = ghComment.GetID()
-		err := r.db.Save(&env).Error
+	if event.prNumber != nil {
+		comment := createFailureComment(envFrontendLink, validationError)
+		ghComment, err := r.ghApp.UpsertComment(ctx, event.owner, event.repo, *event.prNumber, previousCommentID, comment)
 		if err != nil {
-			log.Err(err).Msg("fail to save GHCommentID to database for env")
+			log.Err(err).Msg("fail to post failure comment")
+		} else {
+			env.GHCommentID = ghComment.GetID()
+			err := r.db.Save(&env).Error
+			if err != nil {
+				log.Err(err).Msg("fail to save GHCommentID to database for env")
+			}
 		}
 	}
 
-	err = r.ghApp.CreateCommitStatus(ctx, owner, repo, sha, "failure", github.String(envFrontendLink))
+	err := r.ghApp.CreateCommitStatus(ctx, event.owner, event.repo, event.sha, "failure", github.String(envFrontendLink))
 	if err != nil {
 		log.Err(err).Str("conclusion", "failure").Msg("fail to create commit status")
 	}
@@ -201,30 +220,28 @@ func (r *githubRouter) failRun(
 func (r *githubRouter) successRun(
 	ctx context.Context,
 	envFrontendLink string,
-	event *github.PullRequestEvent,
+	event *LaunchEnvironment,
 	compose *transformer.Compose,
 	env *database.Environment,
 	previousCommentID int64,
 ) {
 	log := logger.Ctx(ctx)
-	owner := event.GetRepo().GetOwner().GetLogin()
-	repo := event.GetRepo().GetName()
-	pr := event.GetPullRequest().GetNumber()
-	sha := event.GetPullRequest().GetHead().GetSHA()
 
-	comment := createSuccessComment(compose)
-	ghComment, err := r.ghApp.UpsertComment(ctx, owner, repo, pr, previousCommentID, comment)
-	if err != nil {
-		log.Err(err).Msg("fail to post success comment")
-	} else {
-		env.GHCommentID = ghComment.GetID()
-		err := r.db.Save(&env).Error
+	if event.prNumber != nil {
+		comment := createSuccessComment(compose)
+		ghComment, err := r.ghApp.UpsertComment(ctx, event.owner, event.repo, *event.prNumber, previousCommentID, comment)
 		if err != nil {
-			log.Err(err).Msg("fail to save GHCommentID to database for env")
+			log.Err(err).Msg("fail to post success comment")
+		} else {
+			env.GHCommentID = ghComment.GetID()
+			err := r.db.Save(&env).Error
+			if err != nil {
+				log.Err(err).Msg("fail to save GHCommentID to database for env")
+			}
 		}
 	}
 
-	err = r.ghApp.CreateCommitStatus(ctx, owner, repo, sha, "success", github.String(envFrontendLink))
+	err := r.ghApp.CreateCommitStatus(ctx, event.owner, event.repo, event.sha, "success", github.String(envFrontendLink))
 	if err != nil {
 		log.Err(err).Str("conclusion", "success").Msg("fail to create commit status")
 	}

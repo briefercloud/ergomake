@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -90,7 +91,7 @@ type gitCompose struct {
 	repo        string
 	branch      string
 	sha         string
-	prNumber    int
+	prNumber    *int
 	author      string
 	isPublic    bool
 
@@ -116,7 +117,7 @@ func NewGitCompose(
 	repo string,
 	branch string,
 	sha string,
-	prNumber int,
+	prNumber *int,
 	author string,
 	isPublic bool,
 	dockerhubPullSecretName string,
@@ -291,13 +292,18 @@ func (c *gitCompose) saveServices(ctx context.Context, envID string, compose *Co
 // returns empty when service should not be exposed
 func (c *gitCompose) getUrl(service kobject.ServiceConfig) string {
 	for _, port := range service.Port {
+		suffix := c.branch
+		if c.prNumber != nil {
+			suffix = strconv.Itoa(*c.prNumber)
+		}
+
 		if port.HostPort > 0 {
 			return strings.ToLower(fmt.Sprintf(
-				"%s-%s-%s-%d.%s",
+				"%s-%s-%s-%s.%s",
 				service.Name,
 				c.owner,
 				strings.ReplaceAll(c.repo, "_", ""),
-				c.prNumber,
+				suffix,
 				clusterDomain,
 			))
 		}

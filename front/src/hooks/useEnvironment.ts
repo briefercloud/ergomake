@@ -31,7 +31,7 @@ export type DegradedReason =
 export type Environment = {
   id: string
   branch: string
-  source: 'cli' | 'pr'
+  source: 'cli' | 'pr' | 'branch'
   status: EnvironmentStatus
   services: EnvironmentService[]
   createdAt: string

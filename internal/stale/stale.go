@@ -253,6 +253,11 @@ func (s *server) MonitorStaleServices(ctx context.Context) {
 
 		envsByOwner := make(map[string][]*database.Environment)
 		for _, env := range envs {
+			if !env.PullRequest.Valid {
+				// branch environments never die
+				continue
+			}
+
 			ownerEnvs, ok := envsByOwner[env.Owner]
 			if !ok {
 				ownerEnvs = make([]*database.Environment, 0)

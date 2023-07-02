@@ -60,7 +60,7 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 
 	launchEnv := &LaunchEnvironment{
 		owner:       owner,
-		branchOwner: branch,
+		branchOwner: owner,
 		repo:        repoName,
 		branch:      branch,
 		sha:         sha,

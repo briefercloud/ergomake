@@ -134,9 +134,9 @@ func (ep *dbEnvironmentsProvider) ShouldDeploy(ctx context.Context, owner string
 		return false, nil
 	}
 
-	var deployedBranch *deployedBranch
+	var deployedBranch deployedBranch
 	err = ep.db.Table("deployed_branches").First(
-		deployedBranch,
+		&deployedBranch,
 		map[string]string{
 			"owner":  owner,
 			"repo":   repo,

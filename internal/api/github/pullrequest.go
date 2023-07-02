@@ -14,6 +14,7 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 	owner := event.GetRepo().GetOwner().GetLogin()
 	repo := event.GetRepo()
 	repoName := repo.GetName()
+	branchOwner := event.GetPullRequest().GetHead().GetRepo().GetOwner().GetLogin()
 	branch := event.GetPullRequest().GetHead().GetRef()
 	sha := event.GetPullRequest().GetHead().GetSHA()
 	prNumber := event.GetPullRequest().GetNumber()
@@ -54,7 +55,7 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 
 		launchEnv := &LaunchEnvironment{
 			owner:       owner,
-			branchOwner: branch,
+			branchOwner: branchOwner,
 			repo:        repoName,
 			branch:      branch,
 			sha:         sha,

@@ -65,9 +65,20 @@ func (er *environmentsRouter) logs(c *gin.Context, build bool) {
 	errChan := make(chan error)
 
 	if build {
-		go er.logStreamer.Stream(c.Request.Context(), services, "preview-builds", logChan, errChan)
+		containers := []string{
+			"detect",
+			"restore",
+			"build",
+			"completion",
+		}
+		namespace := "kpack"
+		if env.BuildTool == "kaniko" {
+			namespace = "preview-builds"
+			containers = []string{}
+		}
+		go er.logStreamer.Stream(c.Request.Context(), services, namespace, containers, logChan, errChan)
 	} else {
-		go er.logStreamer.Stream(c.Request.Context(), services, env.ID.String(), logChan, errChan)
+		go er.logStreamer.Stream(c.Request.Context(), services, env.ID.String(), nil, logChan, errChan)
 	}
 
 	c.Header("Content-Type", "text/event-stream")

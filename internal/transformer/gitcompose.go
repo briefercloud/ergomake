@@ -9,9 +9,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,13 +25,16 @@ import (
 	"github.com/kubernetes/kompose/pkg/loader"
 	"github.com/kubernetes/kompose/pkg/transformer/kubernetes"
 	"github.com/pkg/errors"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/ergomake/ergomake/internal/cluster"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/envvars"
+	"github.com/ergomake/ergomake/internal/ergopack"
 	"github.com/ergomake/ergomake/internal/git"
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/privregistry"
@@ -95,12 +100,13 @@ type gitCompose struct {
 	author      string
 	isPublic    bool
 
-	projectPath   string
-	composePath   string
-	environment   *database.Environment
-	komposeObject *kobject.KomposeObject
-	compose       *Compose
-	cleanup       func()
+	projectPath    string
+	configFilePath string
+	dbEnvironment  *database.Environment
+	environment    *Environment
+	isCompose      bool
+	komposeObject  *kobject.KomposeObject
+	cleanup        func()
 
 	prepared                bool
 	dockerhubPullSecretName string
@@ -141,9 +147,10 @@ func NewGitCompose(
 }
 
 type TransformResult struct {
-	ClusterEnv *cluster.ClusterEnv
-	Compose    *Compose
-	FailedJobs []*batchv1.Job
+	ClusterEnv  *cluster.ClusterEnv
+	Environment *Environment
+	FailedJobs  []*batchv1.Job
+	IsCompose   bool
 }
 
 func (tr *TransformResult) Failed() bool {
@@ -173,25 +180,25 @@ func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult,
 		return nil, errors.Wrap(err, "fail to create environment in db")
 	}
 
-	c.environment = dbEnv
+	c.dbEnvironment = dbEnv
 
-	loadComposeResult, err := c.loadComposeObject(ctx, namespace)
+	loadErgopackResult, err := c.loadErgopack(ctx, namespace)
 	if err != nil {
-		return nil, c.fail(errors.Wrap(err, "fail to load compose object"))
+		return nil, c.fail(errors.Wrap(err, "fail to load ergopack"))
 	}
 
 	c.prepared = true
 
-	if loadComposeResult.Skip {
-		err := c.db.Delete(c.environment).Error
+	if loadErgopackResult.Skip {
+		err := c.db.Delete(c.dbEnvironment).Error
 		if err != nil {
 			logger.Ctx(ctx).Err(err).Msg("fail to delete skipped environment")
 		}
 	}
 
-	if loadComposeResult.ValidationError != nil {
+	if loadErgopackResult.ValidationError != nil {
 		dbEnv.Status = database.EnvDegraded
-		dbEnv.DegradedReason, err = json.Marshal(loadComposeResult.ValidationError)
+		dbEnv.DegradedReason, err = json.Marshal(loadErgopackResult.ValidationError)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to marshal validation error")
 		}
@@ -204,13 +211,13 @@ func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult,
 		return &PrepareResult{
 			Environment:     dbEnv,
 			Skip:            false,
-			ValidationError: loadComposeResult.ValidationError,
+			ValidationError: loadErgopackResult.ValidationError,
 		}, nil
 	}
 
 	return &PrepareResult{
 		Environment: dbEnv,
-		Skip:        loadComposeResult.Skip,
+		Skip:        loadErgopackResult.Skip,
 	}, nil
 }
 
@@ -221,7 +228,7 @@ func (c *gitCompose) Cleanup() {
 }
 
 func (c *gitCompose) fail(origErr error) error {
-	err := c.db.Model(&c.environment).Update("status", database.EnvDegraded).Error
+	err := c.db.Model(&c.dbEnvironment).Update("status", database.EnvDegraded).Error
 	if err != nil {
 		return errors.Wrap(stderrors.Join(origErr, err), "fail to update db environment status to degraded")
 	}
@@ -235,9 +242,9 @@ func (c *gitCompose) Transform(ctx context.Context, id uuid.UUID) (*TransformRes
 	}
 
 	namespace := id.String()
-	result := &TransformResult{}
+	result := &TransformResult{IsCompose: c.isCompose}
 
-	err := c.saveServices(ctx, namespace, c.compose)
+	err := c.saveServices(ctx, id, c.environment)
 	if err != nil {
 		return nil, c.fail(errors.Wrap(err, "fail to save services"))
 	}
@@ -252,33 +259,269 @@ func (c *gitCompose) Transform(ctx context.Context, id uuid.UUID) (*TransformRes
 		return result, c.fail(nil)
 	}
 
-	objects, err := c.transformCompose(ctx, namespace)
-	if err != nil {
-		return nil, c.fail(errors.Wrap(err, "fail to tranform compose into k8s objects"))
+	var objects []runtime.Object
+	if c.isCompose {
+		objs, err := c.transformCompose(ctx, namespace)
+		if err != nil {
+			return nil, c.fail(errors.Wrap(err, "fail to tranform compose into k8s objects"))
+		}
+		objects = objs
+		err = c.db.Model(&c.dbEnvironment).Update("status", database.EnvSuccess).Error
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to update environment status to success in db")
+		}
+	} else {
+		objs, err := c.makeClusterObjects(ctx, namespace)
+		if err != nil {
+			return nil, c.fail(errors.Wrap(err, "fail to make cluster objects"))
+		}
+
+		objects = objs
 	}
 
 	result.ClusterEnv = &cluster.ClusterEnv{
 		Namespace: namespace,
 		Objects:   objects,
 	}
-	result.Compose = c.compose
+	result.Environment = c.environment
 
-	err = c.db.Model(&c.environment).Update("status", database.EnvSuccess).Error
-
-	return result, errors.Wrap(err, "fail to update environment status to success in db")
+	return result, nil
 }
 
-func (c *gitCompose) saveServices(ctx context.Context, envID string, compose *Compose) error {
+func (c *gitCompose) makeClusterObjects(ctx context.Context, namespace string) ([]runtime.Object, error) {
+	vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, c.repo)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to list env vars by repo")
+	}
+
+	secret, err := c.clusterClient.CopySecret(ctx, "kpack", namespace, "kpack-registry-credentials")
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to copy registry credentials")
+	}
+
+	objs := []runtime.Object{secret}
+
+	envVarsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "env-vars",
+			Namespace: namespace,
+		},
+		StringData: map[string]string{},
+	}
+	env := []corev1.EnvVar{}
+
+	dbVars := make(map[string]struct{})
+	for _, v := range vars {
+		envVarsSecret.StringData[v.Name] = v.Value
+
+		env = append(env, corev1.EnvVar{
+			Name: v.Name,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "env-vars",
+					},
+					Key: v.Name,
+				},
+			},
+		})
+		dbVars[v.Name] = struct{}{}
+	}
+
+	objs = append(objs, envVarsSecret)
+
+	for serviceName, envService := range c.environment.Services {
+		for k, v := range envService.Env {
+			if _, ok := dbVars[k]; ok {
+				continue
+			}
+
+			env = append(env, corev1.EnvVar{Name: k, Value: v})
+		}
+
+		labels := c.getLabels(envService.ID, serviceName)
+
+		containerPorts := []corev1.ContainerPort{}
+		servicePorts := []corev1.ServicePort{}
+		ports := map[int]struct{}{}
+		for _, strPort := range append(envService.InternalPorts, envService.PublicPort) {
+			if strPort == "" {
+				continue
+			}
+
+			port, err := strconv.Atoi(strPort)
+			if err != nil {
+				logger.Ctx(ctx).Warn().AnErr("err", err).
+					Str("strPort", strPort).
+					Msg("fail to convert string port to int")
+				continue
+			}
+
+			if _, ok := ports[port]; ok {
+				continue
+			}
+
+			containerPorts = append(containerPorts, corev1.ContainerPort{
+				ContainerPort: int32(port),
+			})
+			servicePorts = append(servicePorts, corev1.ServicePort{
+				Port: int32(port),
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: int32(port),
+				},
+			})
+		}
+
+		container := corev1.Container{
+			Name:  serviceName,
+			Image: envService.Image,
+			Ports: containerPorts,
+			Env:   env,
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceEphemeralStorage: resource.MustParse("2Gi"),
+					corev1.ResourceMemory:           resource.MustParse("1Gi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceEphemeralStorage: resource.MustParse("2Gi"),
+					corev1.ResourceMemory:           resource.MustParse("1Gi"),
+				},
+			},
+			ImagePullPolicy: "IfNotPresent",
+		}
+
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        serviceName,
+				Namespace:   namespace,
+				Labels:      labels,
+				Annotations: labels,
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: pointer.Int32(0),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"preview.ergomake.dev/service": serviceName,
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels:      labels,
+						Annotations: labels,
+					},
+					Spec: corev1.PodSpec{
+						ImagePullSecrets: []corev1.LocalObjectReference{{Name: secret.GetName()}},
+						Containers:       []corev1.Container{container},
+						NodeSelector: map[string]string{
+							"preview.ergomake.dev/role": "preview",
+						},
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: "RuntimeDefault",
+							},
+						},
+						Tolerations: []corev1.Toleration{
+							{
+								Key:      "preview.ergomake.dev/domain",
+								Operator: "Equal",
+								Value:    "previews",
+								Effect:   "NoSchedule",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		objs = append(objs, deployment)
+
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        serviceName,
+				Namespace:   namespace,
+				Labels:      labels,
+				Annotations: labels,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: servicePorts,
+				Selector: map[string]string{
+					"preview.ergomake.dev/service": serviceName,
+				},
+			},
+		}
+		objs = append(objs, service)
+
+		if envService.PublicPort != "" {
+			port, err := strconv.Atoi(envService.PublicPort)
+			if err != nil {
+				logger.Ctx(ctx).Warn().AnErr("err", err).Str("strPort", envService.PublicPort).
+					Msg("fail to convert PublicPort to int")
+				continue
+			}
+
+			pathType := networkingv1.PathTypePrefix
+			ingress := &networkingv1.Ingress{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        serviceName,
+					Namespace:   namespace,
+					Labels:      labels,
+					Annotations: labels,
+				},
+				Spec: networkingv1.IngressSpec{
+					IngressClassName: pointer.String("nginx"),
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: envService.Url,
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path:     "/",
+											PathType: &pathType,
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: serviceName,
+													Port: networkingv1.ServiceBackendPort{
+														Number: int32(port),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			objs = append(objs, ingress)
+		}
+	}
+
+	return objs, nil
+}
+
+func (c *gitCompose) saveServices(ctx context.Context, envID uuid.UUID, compose *Environment) error {
 	var services []database.Service
 	for name, service := range compose.Services {
+		buildStatus := "image"
+		if service.Build != "" {
+			buildStatus = "building"
+		}
+
 		services = append(services, database.Service{
 			ID:            service.ID,
 			Name:          name,
 			EnvironmentID: envID,
 			Url:           service.Url,
 			Build:         service.Build,
+			BuildStatus:   buildStatus,
 			Image:         service.Image,
 			Index:         service.Index,
+			PublicPort:    service.PublicPort,
+			InternalPorts: service.InternalPorts,
 		})
 	}
 
@@ -329,7 +572,7 @@ func (c *gitCompose) fixComposeObject(projectPath, namespace string) error {
 			service.ExposeServiceIngressClassName = "nginx"
 		}
 
-		err := evaluateLabels(&service, c.compose)
+		err := evaluateLabels(&service, c.environment)
 		if err != nil {
 			return errors.Wrap(err, "fail to evaluate ergomake specific labels")
 		}
@@ -354,17 +597,12 @@ func (c *gitCompose) removeUnsupportedVolumes(service *kobject.ServiceConfig) {
 	service.Volumes = volumes
 }
 
-type LoadComposeResult struct {
+type LoadErgopackResult struct {
 	Skip            bool
 	ValidationError *ProjectValidationError
 }
 
-func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (*LoadComposeResult, error) {
-	loader, err := loader.GetLoader("compose")
-	if err != nil {
-		return nil, errors.Wrap(err, "fail to get kompose loader")
-	}
-
+func (c *gitCompose) loadErgopack(ctx context.Context, namespace string) (*LoadErgopackResult, error) {
 	projectPath, err := c.cloneRepo(ctx, namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to clone repo from github")
@@ -386,7 +624,7 @@ func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (*
 			err = nil
 		}
 
-		return &LoadComposeResult{Skip: true}, errors.Wrap(err, "fail to check if .ergomake folder exists")
+		return &LoadErgopackResult{Skip: true}, errors.Wrap(err, "fail to check if .ergomake folder exists")
 	}
 
 	validationErr, err := c.validateProject()
@@ -395,29 +633,69 @@ func (c *gitCompose) loadComposeObject(ctx context.Context, namespace string) (*
 	}
 
 	if validationErr != nil {
-		return &LoadComposeResult{Skip: false, ValidationError: validationErr}, nil
+		return &LoadErgopackResult{Skip: false, ValidationError: validationErr}, nil
 	}
 
-	composeBytes, err := ioutil.ReadFile(c.composePath)
+	if c.isCompose {
+		c.dbEnvironment.BuildTool = "kaniko"
+	} else {
+		c.dbEnvironment.BuildTool = "buildpacks"
+	}
+
+	err = c.db.Save(&c.dbEnvironment).Error
 	if err != nil {
-		return nil, errors.Wrapf(err, "fail to read compose at %s", c.composePath)
+		return nil, errors.Wrap(err, "fail to save env build_tool to db")
 	}
-	composeStr := string(composeBytes)
 
-	komposeObject, err := loader.LoadFile([]string{c.composePath})
+	configBytes, err := ioutil.ReadFile(c.configFilePath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "fail to load compose %s", c.composePath)
+		return nil, errors.Wrapf(err, "fail to read compose at %s", c.configFilePath)
 	}
-	c.komposeObject = &komposeObject
+	configStr := string(configBytes)
 
-	c.compose = c.makeEnvironmentFromServices(
-		komposeObject.ServiceConfigs,
-		composeStr,
-	)
+	if c.isCompose {
+		loader, err := loader.GetLoader("compose")
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to get kompose loader")
+		}
 
-	err = c.fixComposeObject(projectPath, namespace)
+		komposeObject, err := loader.LoadFile([]string{c.configFilePath})
+		if err != nil {
+			return nil, errors.Wrapf(err, "fail to load compose %s", c.configFilePath)
+		}
+		c.komposeObject = &komposeObject
 
-	return &LoadComposeResult{}, errors.Wrap(err, "fail to fix compose object")
+		c.environment = c.makeEnvironmentFromKObjectServices(
+			komposeObject.ServiceConfigs,
+			configStr,
+		)
+
+		err = c.fixComposeObject(projectPath, namespace)
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to fix compose object")
+		}
+	} else {
+		var pack ergopack.Ergopack
+		err := yaml.Unmarshal(configBytes, &pack)
+		if err != nil {
+			relativePath, err := filepath.Rel(projectPath, c.configFilePath)
+			if err != nil {
+				relativePath = c.configFilePath
+			}
+
+			return &LoadErgopackResult{
+				Skip: false,
+				ValidationError: &ProjectValidationError{
+					T:       "invalid-ergopack",
+					Message: fmt.Sprintf("Ergopack file has syntax error\n```\n%s: %s\n```", relativePath, err.Error()),
+				},
+			}, nil
+		}
+
+		c.environment = c.makeEnvironmentFromErgopack(ctx, &pack, string(configBytes))
+	}
+
+	return &LoadErgopackResult{}, nil
 }
 
 func (c *gitCompose) transformCompose(ctx context.Context, namespace string) ([]runtime.Object, error) {
@@ -427,7 +705,7 @@ func (c *gitCompose) transformCompose(ctx context.Context, namespace string) ([]
 		CreateD:    true,
 		Replicas:   1,
 		PushImage:  false,
-		InputFiles: []string{c.composePath},
+		InputFiles: []string{c.configFilePath},
 		Volumes:    "configMap",
 		Controller: "deployment",
 	}
@@ -466,7 +744,7 @@ func (c *gitCompose) cloneRepo(ctx context.Context, namespace string) (string, e
 	return dir, errors.Wrap(err, "fail to clone from github")
 }
 
-func (c *gitCompose) makeEnvironmentFromServices(komposeServices map[string]kobject.ServiceConfig, rawCompose string) *Compose {
+func (c *gitCompose) makeEnvironmentFromKObjectServices(komposeServices map[string]kobject.ServiceConfig, rawCompose string) *Environment {
 	services := map[string]EnvironmentService{}
 	for _, service := range komposeServices {
 		services[service.Name] = EnvironmentService{
@@ -477,10 +755,71 @@ func (c *gitCompose) makeEnvironmentFromServices(komposeServices map[string]kobj
 		}
 	}
 
-	return NewCompose(services, rawCompose)
+	return NewEnvironment(services, rawCompose)
 }
 
-func evaluateLabels(service *kobject.ServiceConfig, env *Compose) error {
+func (c *gitCompose) makeEnvironmentFromErgopack(ctx context.Context, pack *ergopack.Ergopack, rawFile string) *Environment {
+	services := map[string]EnvironmentService{}
+	i := 0
+	for name, service := range pack.Apps {
+		url := ""
+		if service.PublicPort != "" {
+			suffix := c.branch
+			if c.prNumber != nil {
+				suffix = strconv.Itoa(*c.prNumber)
+			}
+
+			url = strings.ToLower(fmt.Sprintf(
+				"%s-%s-%s-%s.%s",
+				name,
+				c.owner,
+				strings.ReplaceAll(c.repo, "_", ""),
+				suffix,
+				clusterDomain,
+			))
+		}
+
+		id := uuid.NewString()
+		image := service.Image
+		if image == "" {
+			image = strings.ToLower(fmt.Sprintf("ergomake/%s-%s-%s:%s", c.owner, c.repo, name, id))
+		}
+
+		services[name] = EnvironmentService{
+			ID:            id,
+			Url:           url,
+			Image:         image,
+			Build:         service.Path,
+			PublicPort:    service.PublicPort,
+			InternalPorts: service.InternalPorts,
+			Index:         i,
+			Env:           service.Env,
+		}
+		i += 1
+	}
+
+	env := NewEnvironment(services, rawFile)
+
+	mustache.AllowMissingVariables = false
+	templateContext := env.ToMap()
+
+	for name, service := range env.Services {
+		for k, v := range service.Env {
+			newV, err := mustache.Render(v, templateContext)
+			if err != nil {
+				logger.Ctx(ctx).Err(err).Str("var", k).Msg("fail to render env var")
+			}
+
+			service.Env[k] = newV
+		}
+
+		env.Services[name] = service
+	}
+
+	return env
+}
+
+func evaluateLabels(service *kobject.ServiceConfig, env *Environment) error {
 	mustache.AllowMissingVariables = false
 
 	templateContext := env.ToMap()
@@ -568,7 +907,7 @@ func (c *gitCompose) fixNamespace(obj runtime.Object, namespace string) {
 
 func (c *gitCompose) addSecurityRestrictions(deployment *appsv1.Deployment) {
 	podSpec := &deployment.Spec.Template.Spec
-	podSpec.AutomountServiceAccountToken = pointer.BoolPtr(false)
+	podSpec.AutomountServiceAccountToken = pointer.Bool(false)
 
 	podSpec.SecurityContext = &corev1.PodSecurityContext{
 		SeccompProfile: &corev1.SeccompProfile{
@@ -621,12 +960,20 @@ func (c *gitCompose) addResourceLimits(deployment *appsv1.Deployment) {
 			corev1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			corev1.ResourceMemory:           resource.MustParse("1Gi"),
 		}
+
+		if strings.ToLower(c.owner) == "writesonic" {
+			service, ok := deployment.Labels["preview.ergomake.dev/service"]
+			if ok && service == "api" {
+				podSpec.Containers[i].Resources.Limits[corev1.ResourceMemory] = resource.MustParse("4Gi")
+				podSpec.Containers[i].Resources.Requests[corev1.ResourceMemory] = resource.MustParse("4Gi")
+			}
+		}
 	}
 }
 
 func (c *gitCompose) addLabels(deployment *appsv1.Deployment) {
 	serviceName := deployment.GetLabels()["io.kompose.service"]
-	service := c.compose.Services[serviceName]
+	service := c.environment.Services[serviceName]
 	repo, _ := c.computeRepoAndBuildPath(service.Build, c.repo)
 
 	labels := map[string]string{
@@ -664,7 +1011,7 @@ func (c *gitCompose) addLabels(deployment *appsv1.Deployment) {
 }
 
 func (c *gitCompose) addEnvVars(ctx context.Context, deployment *appsv1.Deployment) (*corev1.Secret, error) {
-	service := c.compose.Services[deployment.GetLabels()["io.kompose.service"]]
+	service := c.environment.Services[deployment.GetLabels()["io.kompose.service"]]
 	repo, _ := c.computeRepoAndBuildPath(service.Build, c.repo)
 
 	vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, repo)

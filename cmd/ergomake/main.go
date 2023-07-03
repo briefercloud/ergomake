@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/ergomake/ergomake/internal/api"
+	"github.com/ergomake/ergomake/internal/buildpack"
 	"github.com/ergomake/ergomake/internal/cluster"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/elastic"
@@ -20,9 +22,13 @@ import (
 	"github.com/ergomake/ergomake/internal/servicelogs"
 	"github.com/ergomake/ergomake/internal/stale"
 	"github.com/ergomake/ergomake/internal/users"
+
+	kpackBuild "github.com/pivotal/kpack/pkg/apis/build/v1alpha2"
 )
 
 func main() {
+	kpackBuild.AddToScheme(scheme.Scheme)
+
 	var cfg api.Config
 	err := env.LoadEnv(&cfg)
 	if err != nil {
@@ -106,6 +112,12 @@ func main() {
 
 		innerWg.Wait()
 	}()
+
+	clean, err := buildpack.WatchBuilds(clusterClient, db, ghApp, cfg.FrontendURL)
+	if err != nil {
+		log.Fatal().AnErr("err", err).Msg("fail to watch builds")
+	}
+	defer clean()
 
 	wg.Wait()
 }

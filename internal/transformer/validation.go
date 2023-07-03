@@ -39,6 +39,16 @@ func (v *ProjectValidationErrorInvalidCompose) Serialize() json.RawMessage {
 }
 
 func (c *gitCompose) validateProject() (*ProjectValidationError, error) {
+	ergopackPath, err := findErgopackPath(c.projectPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to find ergopack path")
+	}
+
+	if ergopackPath != "" {
+		c.configFilePath = ergopackPath
+		return validateErgopack(c.projectPath, ergopackPath)
+	}
+
 	composePath, err := findComposePath(c.projectPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "fail to find compose at %s", c.projectPath)
@@ -48,9 +58,38 @@ func (c *gitCompose) validateProject() (*ProjectValidationError, error) {
 		return &projectValidationErrorComposeNotFound, nil
 	}
 
-	c.composePath = composePath
+	c.configFilePath = composePath
+	c.isCompose = true
 
 	return validateCompose(c.projectPath, composePath)
+}
+
+var ergopackPaths = []string{
+	".ergomake/ergopack.yml",
+	".ergomake/ergopack.yaml",
+}
+
+func findErgopackPath(projectPath string) (string, error) {
+	var retErr error
+	for _, candidate := range ergopackPaths {
+		ergopackPath := path.Join(projectPath, candidate)
+		if _, err := os.Stat(ergopackPath); err != nil {
+			if !os.IsNotExist(err) {
+				retErr = errors.Wrapf(err, "fail to stat %s", ergopackPath)
+			}
+			continue
+
+		}
+
+		return ergopackPath, nil
+	}
+
+	return "", retErr
+}
+
+func validateErgopack(projectPath string, ergopackPath string) (*ProjectValidationError, error) {
+	// TODO
+	return nil, nil
 }
 
 var composePaths = []string{

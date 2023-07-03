@@ -24,9 +24,9 @@ func (_m *LogStreamer) EXPECT() *LogStreamer_Expecter {
 	return &LogStreamer_Expecter{mock: &_m.Mock}
 }
 
-// Stream provides a mock function with given fields: ctx, services, namespace, logChan, errChan
-func (_m *LogStreamer) Stream(ctx context.Context, services []database.Service, namespace string, logChan chan<- []servicelogs.LogEntry, errChan chan<- error) {
-	_m.Called(ctx, services, namespace, logChan, errChan)
+// Stream provides a mock function with given fields: ctx, services, namespace, allowedContainers, logChan, errChan
+func (_m *LogStreamer) Stream(ctx context.Context, services []database.Service, namespace string, allowedContainers []string, logChan chan<- []servicelogs.LogEntry, errChan chan<- error) {
+	_m.Called(ctx, services, namespace, allowedContainers, logChan, errChan)
 }
 
 // LogStreamer_Stream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Stream'
@@ -38,15 +38,16 @@ type LogStreamer_Stream_Call struct {
 //   - ctx context.Context
 //   - services []database.Service
 //   - namespace string
+//   - allowedContainers []string
 //   - logChan chan<- []servicelogs.LogEntry
 //   - errChan chan<- error
-func (_e *LogStreamer_Expecter) Stream(ctx interface{}, services interface{}, namespace interface{}, logChan interface{}, errChan interface{}) *LogStreamer_Stream_Call {
-	return &LogStreamer_Stream_Call{Call: _e.mock.On("Stream", ctx, services, namespace, logChan, errChan)}
+func (_e *LogStreamer_Expecter) Stream(ctx interface{}, services interface{}, namespace interface{}, allowedContainers interface{}, logChan interface{}, errChan interface{}) *LogStreamer_Stream_Call {
+	return &LogStreamer_Stream_Call{Call: _e.mock.On("Stream", ctx, services, namespace, allowedContainers, logChan, errChan)}
 }
 
-func (_c *LogStreamer_Stream_Call) Run(run func(ctx context.Context, services []database.Service, namespace string, logChan chan<- []servicelogs.LogEntry, errChan chan<- error)) *LogStreamer_Stream_Call {
+func (_c *LogStreamer_Stream_Call) Run(run func(ctx context.Context, services []database.Service, namespace string, allowedContainers []string, logChan chan<- []servicelogs.LogEntry, errChan chan<- error)) *LogStreamer_Stream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]database.Service), args[2].(string), args[3].(chan<- []servicelogs.LogEntry), args[4].(chan<- error))
+		run(args[0].(context.Context), args[1].([]database.Service), args[2].(string), args[3].([]string), args[4].(chan<- []servicelogs.LogEntry), args[5].(chan<- error))
 	})
 	return _c
 }
@@ -56,7 +57,7 @@ func (_c *LogStreamer_Stream_Call) Return() *LogStreamer_Stream_Call {
 	return _c
 }
 
-func (_c *LogStreamer_Stream_Call) RunAndReturn(run func(context.Context, []database.Service, string, chan<- []servicelogs.LogEntry, chan<- error)) *LogStreamer_Stream_Call {
+func (_c *LogStreamer_Stream_Call) RunAndReturn(run func(context.Context, []database.Service, string, []string, chan<- []servicelogs.LogEntry, chan<- error)) *LogStreamer_Stream_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	kpackBuild "github.com/pivotal/kpack/pkg/apis/build/v1alpha2"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -20,8 +23,12 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/utils/pointer"
@@ -29,6 +36,7 @@ import (
 
 type k8sClient struct {
 	*kubernetes.Clientset
+	config *rest.Config
 }
 
 func k8sConfig() (*rest.Config, error) {
@@ -53,7 +61,7 @@ func NewK8sClient() (*k8sClient, error) {
 		return nil, errors.Wrap(err, "fail to create k8s clientset")
 	}
 
-	return &k8sClient{clientset}, nil
+	return &k8sClient{clientset, config}, nil
 }
 
 func (k8s *k8sClient) CreateNamespace(ctx context.Context, namespace string) error {
@@ -84,7 +92,29 @@ func (k8s *k8sClient) GetPreviewNamespaces(ctx context.Context) ([]corev1.Namesp
 }
 
 func (k8s *k8sClient) DeleteNamespace(ctx context.Context, namespace string) error {
-	return k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+	err := k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "fail to request deletion of namespace %s", namespace)
+	}
+
+	timeout := time.After(20 * time.Second)
+	tick := time.NewTicker(1 * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			return nil
+		case <-tick.C:
+			_, err := k8s.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			if k8serrors.IsNotFound(err) {
+				return nil
+			}
+
+			if err != nil {
+				return errors.Wrapf(err, "fail to get namespace %s", namespace)
+			}
+		}
+	}
 }
 
 func (k8s *k8sClient) CreateService(ctx context.Context, service *corev1.Service) error {
@@ -122,6 +152,13 @@ func (k8s *k8sClient) CreateJob(ctx context.Context, job *batchv1.Job) (*batchv1
 func (k8s *k8sClient) CreateSecret(ctx context.Context, secret *corev1.Secret) error {
 	_, err := k8s.CoreV1().Secrets(secret.GetNamespace()).
 		Create(ctx, secret, metav1.CreateOptions{})
+
+	return err
+}
+
+func (k8s *k8sClient) CreateServiceAccount(ctx context.Context, svcAcc *corev1.ServiceAccount) error {
+	_, err := k8s.CoreV1().ServiceAccounts(svcAcc.GetNamespace()).
+		Create(ctx, svcAcc, metav1.CreateOptions{})
 
 	return err
 }
@@ -434,4 +471,72 @@ func (k8s *k8sClient) WatchServiceLogs(ctx context.Context, namespace, name stri
 	}
 
 	return logsCh, errCh, nil
+}
+
+func (k8 *k8sClient) ApplyKPackBuilds(ctx context.Context, builds []*kpackBuild.Build) error {
+	if len(builds) <= 0 {
+		return nil
+	}
+
+	// TODO: can we apply all at once? how to guarantee atomicity?
+	for _, build := range builds {
+		data, err := json.Marshal(build)
+		if err != nil {
+			return errors.Wrap(err, "fail to marshal build to yaml")
+		}
+		resourcePath := fmt.Sprintf("/apis/%s/namespaces/%s/builds", builds[0].APIVersion, builds[0].GetNamespace())
+
+		err = k8.RESTClient().
+			Post().
+			AbsPath(resourcePath).
+			SetHeader("Content-Type", "application/json").
+			Body(data).
+			Do(ctx).
+			Error()
+
+		if err != nil {
+			return errors.Wrap(err, "fail to apply kpack builds")
+		}
+	}
+
+	return nil
+}
+
+func (k8 *k8sClient) WatchResource(
+	ctx context.Context,
+	gvr schema.GroupVersionResource,
+	handler cache.ResourceEventHandlerFuncs,
+) (Starter, error) {
+	dynamicClient, err := dynamic.NewForConfig(k8.config)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to create k8s dynamic client")
+	}
+
+	informerFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, time.Second*30)
+
+	informer := informerFactory.ForResource(gvr).Informer()
+	informer.AddEventHandler(handler)
+
+	return informerFactory, nil
+}
+
+func (k8 *k8sClient) CopySecret(ctx context.Context, fromNS, toNS, name string) (*corev1.Secret, error) {
+	from, err := k8.CoreV1().Secrets(fromNS).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to get secret")
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   toNS,
+			Labels:      from.GetLabels(),
+			Annotations: from.GetAnnotations(),
+		},
+		Data:       from.Data,
+		StringData: from.StringData,
+		Type:       corev1.SecretTypeDockerConfigJson,
+	}
+
+	return secret, errors.Wrap(err, "fail to create secret")
 }

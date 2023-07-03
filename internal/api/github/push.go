@@ -59,14 +59,14 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 	}
 
 	launchEnv := &LaunchEnvironment{
-		owner:       owner,
-		branchOwner: owner,
-		repo:        repoName,
-		branch:      branch,
-		sha:         sha,
-		prNumber:    nil,
-		author:      author,
-		isPrivate:   repo.GetPrivate(),
+		Owner:       owner,
+		BranchOwner: owner,
+		Repo:        repoName,
+		Branch:      branch,
+		SHA:         sha,
+		PrNumber:    nil,
+		Author:      author,
+		IsPrivate:   repo.GetPrivate(),
 	}
 
 	err = r.launchEnvironment(ctx, launchEnv)

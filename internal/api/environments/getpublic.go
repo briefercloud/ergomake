@@ -1,10 +1,12 @@
 package environments
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/ergomake/ergomake/internal/logger"
 )
@@ -18,6 +20,11 @@ func (er *environmentsRouter) getPublic(c *gin.Context) {
 
 	env, err := er.db.FindEnvironmentByID(envID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+			return
+		}
+
 		logger.Ctx(c).Err(err).Msgf("fail to find environment by id %s", envID)
 		c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 		return

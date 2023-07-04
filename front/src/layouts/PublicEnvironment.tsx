@@ -17,14 +17,18 @@ function Layout({ environment, showLogsHint }: Props) {
 
   let logsLink = ''
   let caption = 'Waking up services'
-  if (isSuccess(environment) && environment.body?.status === 'success') {
-    const env = environment.body
-    if (env.areServicesAlive) {
-      caption = 'Redirecting'
-    } else {
-      caption = 'Waiting for services to start accepting connections'
-      if (showLogsHint) {
-        logsLink = `/gh/${env.owner}/repos/${env.repo}/envs/${env.id}`
+  if (isSuccess(environment)) {
+    if (!environment.body) {
+      caption = 'This environment is terminated.'
+    } else if (environment.body.status === 'success') {
+      const env = environment.body
+      if (env.areServicesAlive) {
+        caption = 'Redirecting'
+      } else {
+        caption = 'Waiting for services to start accepting connections'
+        if (showLogsHint) {
+          logsLink = `/gh/${env.owner}/repos/${env.repo}/envs/${env.id}`
+        }
       }
     }
   }

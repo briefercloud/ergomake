@@ -613,12 +613,12 @@ func (c *gitCompose) addResourceLimits(deployment *appsv1.Deployment) {
 	podSpec := &deployment.Spec.Template.Spec
 	for i := range podSpec.Containers {
 		podSpec.Containers[i].Resources.Limits = corev1.ResourceList{
-			corev1.ResourceEphemeralStorage: resource.MustParse("2Gi"),
+			corev1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			corev1.ResourceMemory:           resource.MustParse("1Gi"),
 		}
 
 		podSpec.Containers[i].Resources.Requests = corev1.ResourceList{
-			corev1.ResourceEphemeralStorage: resource.MustParse("2Gi"),
+			corev1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			corev1.ResourceMemory:           resource.MustParse("1Gi"),
 		}
 	}

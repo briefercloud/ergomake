@@ -11,6 +11,7 @@ import Loading from './Loading'
 interface Props {
   profile: Profile
 }
+
 function Projects({ profile }: Props) {
   const ownersRes = useOwners()
   const params = useParams<{ owner: string }>()

@@ -354,7 +354,7 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
             <div className="w-full border-t border-gray-200" />
           </div>
 
-          <main className="py-10">
+          <main>
             <div className="px-4 sm:px-6 lg:px-8">{children}</div>
           </main>
         </div>

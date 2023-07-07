@@ -1,10 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { orElse } from '../../hooks/useHTTPRequest'
 import { useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
+import { useReposByOwner } from '../../hooks/useReposByOwner'
 import Layout from '../components/Layout'
+import RepositoryList from '../components/RepositoryList'
 
 interface Props {
   profile: Profile
@@ -23,9 +25,22 @@ const Projects = ({ profile }: Props) => {
     { name: 'Repositories', href: `/v2/gh/${owner}`, label: 'Projects' },
   ]
 
+  const reposRes = useReposByOwner(params.owner ?? profile.username)
+  const [search, setSearch] = useState('')
+  const [repos, hasProjects] = useMemo(() => {
+    const repos = orElse(reposRes, []).filter((r) => r.isInstalled)
+
+    return [
+      repos
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .filter((r) => search === '' || r.name.includes(search)),
+      repos.length > 0,
+    ]
+  }, [reposRes, search])
+
   return (
     <Layout profile={profile} pages={pages}>
-      <h1>Hello world!</h1>
+      <RepositoryList repos={repos} />
     </Layout>
   )
 }

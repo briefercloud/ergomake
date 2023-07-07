@@ -1,4 +1,5 @@
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
+import { Link } from 'react-router-dom'
 
 import { Repo } from '../../hooks/useRepo'
 import { classNames } from '../utils'
@@ -55,34 +56,38 @@ const RepositoryList = ({ repos }: RepositoryListProps) => {
   return (
     <ul className="-mx-4 sm:-mx-6 lg:-mx-8">
       {repos.map((repo) => (
-        <li
-          key={repo.name}
-          className="relative flex items-center space-x-4 py-4 px-8 hover:bg-gray-100 border-b border-gray-200/70 hover:cursor-pointer"
-        >
-          <div className="min-w-0 flex-auto space-y-2">
-            <div className="flex items-center gap-x-3">
-              <h2 className="min-w-0 text-lg font-semibold leading-6 text-primary-900">
-                <a href="#" className="flex gap-x-2">
+        <Link to={`/v2/gh/${repo.owner}/repos/${repo.name}/`}>
+          <li
+            key={repo.name}
+            className="relative flex items-center space-x-4 py-4 px-8 hover:bg-gray-100 border-b border-gray-200/70 hover:cursor-pointer"
+          >
+            <div className="min-w-0 flex-auto space-y-2">
+              <div className="flex items-center gap-x-3">
+                <h2 className="min-w-0 text-lg font-semibold leading-6 text-primary-900">
                   <span className="whitespace-nowrap">{repo.name}</span>
-                </a>
-              </h2>
+                </h2>
+              </div>
+              <div className="mt-3 flex items-center gap-x-2.5 text-xs leading-5 text-gray-400">
+                <p className="truncate">
+                  {repo.environmentCount === 1
+                    ? `${repo.environmentCount} environment`
+                    : `${repo.environmentCount} environments`}{' '}
+                </p>
+                <svg
+                  viewBox="0 0 2 2"
+                  className="h-1 w-1 flex-none fill-gray-300"
+                >
+                  <circle cx={1} cy={1} r={1} />
+                </svg>
+                <p className="whitespace-nowrap">Deploys from GitHub</p>
+              </div>
             </div>
-            <div className="mt-3 flex items-center gap-x-2.5 text-xs leading-5 text-gray-400">
-              <p className="truncate">{repo.environmentCount} environments</p>
-              <svg
-                viewBox="0 0 2 2"
-                className="h-1 w-1 flex-none fill-gray-300"
-              >
-                <circle cx={1} cy={1} r={1} />
-              </svg>
-              <p className="whitespace-nowrap">Deploys from GitHub</p>
-            </div>
-          </div>
-          <ChevronRightIcon
-            className="h-5 w-5 flex-none text-gray-400"
-            aria-hidden="true"
-          />
-        </li>
+            <ChevronRightIcon
+              className="h-5 w-5 flex-none text-gray-400"
+              aria-hidden="true"
+            />
+          </li>
+        </Link>
       ))}
     </ul>
   )

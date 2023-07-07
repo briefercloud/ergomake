@@ -141,8 +141,8 @@ func TestGitCompose_Transform(t *testing.T) {
 						"dontbuild": {Image: "mongo"},
 					},
 				}
-				gc.compose = &Compose{}
-				gc.environment = dbEnv
+				gc.environment = &Environment{}
+				gc.dbEnvironment = dbEnv
 
 				return gc
 			},
@@ -158,6 +158,7 @@ func TestGitCompose_Transform(t *testing.T) {
 			gc := tc.setup(t, id)
 
 			gc.prepared = true
+			gc.isCompose = true
 			_, err := gc.Transform(context.Background(), id)
 			if tc.errors {
 				assert.Error(t, err)
@@ -168,7 +169,7 @@ func TestGitCompose_Transform(t *testing.T) {
 	}
 }
 
-func TestGitCompose_loadComposeObject(t *testing.T) {
+func TestGitCompose_loadErgopack(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -235,7 +236,7 @@ services:
 
 			gitCompose := tc.setup(t)
 
-			_, err := gitCompose.loadComposeObject(context.Background(), tc.namespace)
+			_, err := gitCompose.loadErgopack(context.Background(), tc.namespace)
 			require.NoError(t, err)
 
 			if tc.assertFn != nil {
@@ -321,7 +322,7 @@ services:
 				privregistryMock.NewPrivRegistryProvider(t),
 				"owner", "owner", "repo", "branch", "sha", pointer.Int(1337), "author", true, "hub-secret",
 			)
-			env := gc.makeEnvironmentFromServices(tc.services, tc.rawCompose)
+			env := gc.makeEnvironmentFromKObjectServices(tc.services, tc.rawCompose)
 
 			for k, s := range env.Services {
 				assert.NotEmpty(t, s.ID)

@@ -17,7 +17,7 @@ type LogEntry struct {
 }
 
 type LogStreamer interface {
-	Stream(ctx context.Context, services []database.Service, namespace string, logChan chan<- []LogEntry, errChan chan<- error)
+	Stream(ctx context.Context, services []database.Service, namespace string, allowedContainers []string, logChan chan<- []LogEntry, errChan chan<- error)
 }
 
 type esLogStreamer struct {
@@ -47,12 +47,27 @@ func (es *esLogStreamer) Stream(
 	ctx context.Context,
 	services []database.Service,
 	namespace string,
+	allowedContainers []string,
 	logChan chan<- []LogEntry,
 	errChan chan<- error,
 ) {
 	stopChans := make([]chan struct{}, len(services))
 	for i := 0; i < len(services); i++ {
 		stopChans[i] = make(chan struct{})
+	}
+
+	isContainerAllowed := func(container string) bool {
+		if len(allowedContainers) == 0 {
+			return true
+		}
+
+		for _, allowed := range allowedContainers {
+			if allowed == container {
+				return true
+			}
+		}
+
+		return false
 	}
 
 	for i, service := range services {
@@ -70,7 +85,8 @@ func (es *esLogStreamer) Stream(
 			var timestamp *time.Time
 			sleepDuration := time.Millisecond
 			offset := int64(-1)
-			currentContainer := ""
+			currentContainerID := ""
+			currentContainerName := ""
 			for {
 				select {
 				case <-stopChans[i]:
@@ -86,12 +102,18 @@ func (es *esLogStreamer) Stream(
 					return
 				}
 
-				if nextContainer != "" && nextContainer != currentContainer {
-					currentContainer = nextContainer
-					offset = -1
+				if len(nextContainer.Hits.Hits) > 0 {
+					nextContainerID := nextContainer.Hits.Hits[0].Source.Container.ID
+					nextContainerName := nextContainer.Hits.Hits[0].Source.Kubernetes.Container.Name
+
+					if nextContainerID != "" && nextContainerID != currentContainerID {
+						currentContainerID = nextContainerID
+						currentContainerName = nextContainerName
+						offset = -1
+					}
 				}
 
-				query := getLogsQuery(serviceID, namespace, currentContainer, offset)
+				query := getLogsQuery(serviceID, namespace, currentContainerID, offset)
 				var qr logsQueryResult
 				if err := es.elastic.Search(ctx, query, &qr); err != nil {
 					errChan <- errors.Wrap(err, "failed to query elasticsearch")
@@ -115,7 +137,9 @@ func (es *esLogStreamer) Stream(
 				case <-ctx.Done():
 					return
 				default:
-					logChan <- entries
+					if isContainerAllowed(currentContainerName) {
+						logChan <- entries
+					}
 				}
 
 				if len(entries) == 0 {
@@ -140,6 +164,11 @@ type nextContainerQueryResult struct {
 				Container struct {
 					ID string `json:"id"`
 				} `json:"container"`
+				Kubernetes struct {
+					Container struct {
+						Name string `json:"name"`
+					} `json:"container"`
+				} `json:"kubernetes"`
 			} `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
@@ -150,17 +179,13 @@ func (es *esLogStreamer) getNextContainer(
 	serviceID string,
 	namespace string,
 	timestamp *time.Time,
-) (string, error) {
+) (*nextContainerQueryResult, error) {
 	query := getNextContainerQuery(serviceID, namespace, timestamp)
 
 	var qr nextContainerQueryResult
 	if err := es.elastic.Search(ctx, query, &qr); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if len(qr.Hits.Hits) == 0 {
-		return "", nil
-	}
-
-	return qr.Hits.Hits[0].Source.Container.ID, nil
+	return &qr, nil
 }

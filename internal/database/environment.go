@@ -37,6 +37,7 @@ type Environment struct {
 	DegradedReason json.RawMessage `gorm:"type:jsonb"`
 	Services       []Service       `gorm:"foreignKey:EnvironmentID"`
 	GHCommentID    int64           `gorm:"column:gh_comment_id"`
+	BuildTool      string
 }
 
 func NewEnvironment(
@@ -69,7 +70,11 @@ func NewEnvironment(
 
 func (db *DB) FindEnvironmentByID(id uuid.UUID) (Environment, error) {
 	var env Environment
-	result := db.First(&env, "id = ?", id)
+	result := db.
+		Preload("Services", func(db *gorm.DB) *gorm.DB {
+			return db.Order("services.index ASC")
+		}).
+		First(&env, "id = ?", id)
 
 	return env, result.Error
 }

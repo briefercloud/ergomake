@@ -7,7 +7,7 @@ import (
 	"github.com/ergomake/ergomake/internal/transformer"
 )
 
-func createSuccessComment(env *transformer.Compose) string {
+func createSuccessComment(env *transformer.Environment) string {
 	return fmt.Sprintf(`Hi 👋
 
 Here's a preview environment 🚀
@@ -28,7 +28,7 @@ Questions? Comments? Suggestions? [Join Discord](https://discord.gg/daGzchUGDt).
 	)
 }
 
-func getMainServiceUrl(env *transformer.Compose) string {
+func getMainServiceUrl(env *transformer.Environment) string {
 	return getServiceUrl(env.FirstService())
 }
 
@@ -67,7 +67,7 @@ Thanks for using Ergomake!
 [Click here](https://github.com/apps/ergomake) to disable Ergomake.`
 }
 
-func getServiceTable(env *transformer.Compose) string {
+func getServiceTable(env *transformer.Environment) string {
 	rows := make([]string, len(env.Services))
 	for serviceName, serviceConfig := range env.Services {
 		rows[serviceConfig.Index] = fmt.Sprintf("| %s | %s | %s |", serviceName, getSource(serviceConfig), getServiceUrl(serviceConfig))

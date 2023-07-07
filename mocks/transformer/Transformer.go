@@ -26,13 +26,13 @@ func (_m *Transformer) EXPECT() *Transformer_Expecter {
 }
 
 // Transform provides a mock function with given fields: ctx, namespace
-func (_m *Transformer) Transform(ctx context.Context, namespace string) (*cluster.ClusterEnv, *transformer.Compose, error) {
+func (_m *Transformer) Transform(ctx context.Context, namespace string) (*cluster.ClusterEnv, *transformer.Environment, error) {
 	ret := _m.Called(ctx, namespace)
 
 	var r0 *cluster.ClusterEnv
-	var r1 *transformer.Compose
+	var r1 *transformer.Environment
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*cluster.ClusterEnv, *transformer.Compose, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*cluster.ClusterEnv, *transformer.Environment, error)); ok {
 		return rf(ctx, namespace)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) *cluster.ClusterEnv); ok {
@@ -43,11 +43,11 @@ func (_m *Transformer) Transform(ctx context.Context, namespace string) (*cluste
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) *transformer.Compose); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string) *transformer.Environment); ok {
 		r1 = rf(ctx, namespace)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*transformer.Compose)
+			r1 = ret.Get(1).(*transformer.Environment)
 		}
 	}
 
@@ -79,12 +79,12 @@ func (_c *Transformer_Transform_Call) Run(run func(ctx context.Context, namespac
 	return _c
 }
 
-func (_c *Transformer_Transform_Call) Return(_a0 *cluster.ClusterEnv, _a1 *transformer.Compose, _a2 error) *Transformer_Transform_Call {
+func (_c *Transformer_Transform_Call) Return(_a0 *cluster.ClusterEnv, _a1 *transformer.Environment, _a2 error) *Transformer_Transform_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *Transformer_Transform_Call) RunAndReturn(run func(context.Context, string) (*cluster.ClusterEnv, *transformer.Compose, error)) *Transformer_Transform_Call {
+func (_c *Transformer_Transform_Call) RunAndReturn(run func(context.Context, string) (*cluster.ClusterEnv, *transformer.Environment, error)) *Transformer_Transform_Call {
 	_c.Call.Return(run)
 	return _c
 }

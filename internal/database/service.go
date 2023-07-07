@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -11,11 +12,14 @@ import (
 type Service struct {
 	ID            string `gorm:"primaryKey"`
 	Name          string
-	EnvironmentID string `gorm:"index"`
+	EnvironmentID uuid.UUID `gorm:"type:uuid;index"`
 	Url           string
 	Image         string
 	Build         string
+	BuildStatus   string
 	Index         int
+	PublicPort    string
+	InternalPorts pq.StringArray `gorm:"type:text[]"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	DeletedAt     gorm.DeletedAt `gorm:"index"`

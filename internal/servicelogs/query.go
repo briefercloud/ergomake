@@ -72,7 +72,7 @@ func getNextContainerQuery(serviceID string, namespace string, timestamp *time.T
 				"order": "asc",
 			},
 		}},
-		"_source": []string{"container.id"},
+		"_source": []string{"container.id", "kubernetes.container.name"},
 		"size":    1,
 	}
 }

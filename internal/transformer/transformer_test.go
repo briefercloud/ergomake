@@ -30,12 +30,12 @@ volumes:
 `
 
 func TestTransformerCompose_FirstService(t *testing.T) {
-	compose := Compose{
+	compose := Environment{
 		Services: map[string]EnvironmentService{
 			"redis": {Image: "redis", Index: 1},
 			"mongo": {Image: "mongo", Index: 0},
 		},
-		RawCompose: rawCompose,
+		RawContent: rawCompose,
 	}
 
 	firstService := compose.FirstService()
@@ -46,17 +46,17 @@ func TestTransformerCompose_FirstService(t *testing.T) {
 func TestTransformerCompose_computeServicesIndexes(t *testing.T) {
 	tt := []struct {
 		name    string
-		compose Compose
+		compose Environment
 		want    map[string]EnvironmentService
 	}{
 		{
 			name: "complicated compose",
-			compose: Compose{
+			compose: Environment{
 				Services: map[string]EnvironmentService{
 					"redis": {Image: "redis"},
 					"mongo": {Image: "mongo"},
 				},
-				RawCompose: rawCompose,
+				RawContent: rawCompose,
 			},
 			want: map[string]EnvironmentService{
 				"redis": {Image: "redis", Index: 1},
@@ -65,12 +65,12 @@ func TestTransformerCompose_computeServicesIndexes(t *testing.T) {
 		},
 		{
 			name: "call service something that can be a key like 'ports' or 'image'",
-			compose: Compose{
+			compose: Environment{
 				Services: map[string]EnvironmentService{
 					"ports": {Image: "mongo"},
 					"image": {Image: "redis"},
 				},
-				RawCompose: `
+				RawContent: `
 version: '3.8'
 services:
   image:
@@ -90,12 +90,12 @@ services:
 		},
 		{
 			name: "when first lines after services is are comments and empty lines",
-			compose: Compose{
+			compose: Environment{
 				Services: map[string]EnvironmentService{
 					"ports": {Image: "mongo"},
 					"image": {Image: "redis"},
 				},
-				RawCompose: `
+				RawContent: `
 version: '3.8'
 services:
 

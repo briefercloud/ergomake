@@ -54,14 +54,14 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 		}
 
 		launchEnv := &LaunchEnvironment{
-			owner:       owner,
-			branchOwner: branchOwner,
-			repo:        repoName,
-			branch:      branch,
-			sha:         sha,
-			prNumber:    &prNumber,
-			author:      author,
-			isPrivate:   repo.GetPrivate(),
+			Owner:       owner,
+			BranchOwner: branchOwner,
+			Repo:        repoName,
+			Branch:      branch,
+			SHA:         sha,
+			PrNumber:    &prNumber,
+			Author:      author,
+			IsPrivate:   repo.GetPrivate(),
 		}
 
 		err = r.launchEnvironment(ctx, launchEnv)

@@ -71,8 +71,8 @@ func TestGitCompose_computeRepoAndBuildPath(t *testing.T) {
 			t.Parallel()
 
 			c := &gitCompose{
-				projectPath: tc.projectPath,
-				composePath: tc.composePath,
+				projectPath:    tc.projectPath,
+				configFilePath: tc.composePath,
 			}
 
 			repo, buildPath := c.computeRepoAndBuildPath(tc.buildPath, tc.defaultRepo)

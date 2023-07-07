@@ -9,6 +9,7 @@ import Projects from './pages/Projects'
 import PublicEnvironment from './pages/PublicEnvironment'
 import Purchase from './pages/Purchase'
 import Registries from './pages/Registries'
+import EnvironmentsV2 from './v2/pages/Environments'
 import Login from './v2/pages/Login'
 import ProjectsV2 from './v2/pages/Projects'
 import SuperTest from './v2/test'
@@ -56,6 +57,14 @@ const router = createBrowserRouter([
     element: (
       <RequireAuth>
         {(profile) => <Environments profile={profile} />}
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/v2/gh/:owner/repos/:repo',
+    element: (
+      <RequireAuth>
+        {(profile) => <EnvironmentsV2 profile={profile} />}
       </RequireAuth>
     ),
   },

@@ -78,15 +78,15 @@ const Environments = ({ profile }: Props) => {
       new Date(env.createdAt),
       new Date()
     )}`,
-    url: `/v2/gh/${owner.login}/${params.repo}/envs/${env.branch}`,
+    url: `/v2/gh/${owner.login}/repos/${params.repo}/envs/${env.branch}`,
   }))
 
   const pages = [
     { name: 'Repositories', href: `/v2/gh/${owner.login}`, label: 'Projects' },
     {
       name: params.repo ?? '',
-      href: `/v2/gh/${owner.login}`,
-      label: 'Projects',
+      href: `/v2/gh/${owner.login}/repos/${params.repo}`,
+      label: params.repo ?? '',
     },
   ]
 

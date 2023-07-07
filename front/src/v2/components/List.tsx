@@ -15,7 +15,7 @@ type ListProps = {
 
 const List = ({ items }: ListProps) => {
   return (
-    <ul className="-mx-4 sm:-mx-6 lg:-mx-8">
+    <ul>
       {items.map((item) => (
         <Link to={item.url}>
           <li

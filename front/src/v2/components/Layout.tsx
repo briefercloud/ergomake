@@ -2,25 +2,25 @@ import { Dialog, Menu, Transition } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import {
   Bars3Icon,
-  BellIcon,
-  CalendarIcon,
-  ChartPieIcon,
-  Cog6ToothIcon,
-  DocumentDuplicateIcon,
   FolderIcon,
-  HomeIcon,
-  UsersIcon,
+  LockClosedIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { Fragment, useState } from 'react'
 
 import { Profile } from '../../hooks/useProfile'
 import Logo from '../components/Logo'
+import WebsitePath, { Pages } from '../components/WebsitePath'
 import { classNames } from '../utils'
 
 const navigation = [
-  { name: 'Your projects', href: '#', icon: HomeIcon, current: true },
-  { name: 'Private registries', href: '#', icon: UsersIcon, current: false },
+  { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
+  {
+    name: 'Private registries',
+    href: '#',
+    icon: LockClosedIcon,
+    current: false,
+  },
 ]
 const teams = [
   { id: 1, name: 'Heroicons', href: '#', initial: 'H', current: true },
@@ -41,7 +41,6 @@ const sidebarColor = `bg-white shadow`
 const DesktopSidebar = () => {
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-      {/* Sidebar component, swap this element with another sidebar if you like */}
       <div
         className={classNames(
           sidebarColor,
@@ -240,11 +239,19 @@ const MobileSidebar = ({ sidebarOpen, closeSidebar }: MobileSidebarProps) => {
   )
 }
 
-type MobileSidebarControlProps = { profile: Profile; openSidebar: () => void }
+type MobileSidebarControlProps = {
+  profile: Profile
+  openSidebar: () => void
+  pages: Pages[]
+}
 
-const TopNavbar = ({ profile, openSidebar }: MobileSidebarControlProps) => {
+const TopNavbar = ({
+  profile,
+  openSidebar,
+  pages,
+}: MobileSidebarControlProps) => {
   return (
-    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none md:border-0 md:bg-transparent sm:gap-x-6 sm:px-6 lg:px-8 flex md:justify-end">
+    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none md:border-0 md:bg-transparent sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
       <button
         type="button"
         className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
@@ -254,12 +261,14 @@ const TopNavbar = ({ profile, openSidebar }: MobileSidebarControlProps) => {
         <Bars3Icon className="h-6 w-6" aria-hidden="true" />
       </button>
 
-      {/* Separator */}
-      <div className="h-6 w-px bg-gray-900/10 lg:hidden" aria-hidden="true" />
+      <div className="invisible md:visible">
+        <WebsitePath pages={pages} />
+
+        <div className="h-6 w-px bg-gray-900/10 lg:hidden" aria-hidden="true" />
+      </div>
 
       <div className="flex gap-x-4 self-stretch lg:gap-x-6">
         <div className="flex items-center gap-x-4 lg:gap-x-6">
-          {/* Profile dropdown */}
           <Menu as="div" className="relative">
             <Menu.Button className="-m-1.5 flex items-center p-1.5">
               <span className="sr-only">Open user menu</span>
@@ -318,9 +327,10 @@ const TopNavbar = ({ profile, openSidebar }: MobileSidebarControlProps) => {
 type LayoutProps = {
   children: React.ReactNode
   profile: Profile
+  pages: Pages[]
 }
 
-const Layout = ({ profile, children }: LayoutProps) => {
+const Layout = ({ profile, children, pages }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -335,11 +345,12 @@ const Layout = ({ profile, children }: LayoutProps) => {
 
         <div className="lg:pl-72">
           <TopNavbar
+            pages={pages}
             profile={profile}
             openSidebar={() => setSidebarOpen(true)}
           />
 
-          <div className="py-2 px-6">
+          <div className="invisible md:visible flex items-center">
             <div className="w-full border-t border-gray-200" />
           </div>
 

@@ -2,10 +2,12 @@ package github
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/ergomake/ergomake/internal/api/auth"
+	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/logger"
 )
 
@@ -32,7 +34,7 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 		return
 	}
 
-	environments, err := ghr.db.FindEnvironmentsByOwner(owner)
+	environments, err := ghr.db.FindEnvironmentsByOwner(owner, database.FindEnvironmentsOptions{IncludeDeleted: true})
 	if err != nil {
 		logger.Ctx(c).Err(err).
 			Str("owner", owner).
@@ -45,7 +47,21 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 	}
 
 	envsCountByRepo := make(map[string]int)
+	lastDeployedAtByRepo := make(map[string]*time.Time)
 	for _, env := range environments {
+		lastDeployedAt := lastDeployedAtByRepo[env.Repo]
+		if lastDeployedAt != nil {
+			if env.CreatedAt.After(*lastDeployedAt) {
+				lastDeployedAtByRepo[env.Repo] = &env.CreatedAt
+			}
+		} else {
+			lastDeployedAtByRepo[env.Repo] = &env.CreatedAt
+		}
+
+		if env.DeletedAt.Valid {
+			continue
+		}
+
 		envs, ok := envsCountByRepo[env.Repo]
 		if !ok {
 			envsCountByRepo[env.Repo] = 1
@@ -68,16 +84,16 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 
 	repos := []gin.H{}
 	for _, repo := range repositories {
-		environmentCount, ok := envsCountByRepo[repo.GetName()]
-		if !ok {
-			environmentCount = 0
-		}
+		environmentCount := envsCountByRepo[repo.GetName()]
+
+		lastDeployedAt := lastDeployedAtByRepo[repo.GetName()]
 
 		repos = append(repos, gin.H{
 			"owner":            owner,
 			"name":             repo.GetName(),
 			"isInstalled":      true,
 			"environmentCount": environmentCount,
+			"lastDeployedAt":   lastDeployedAt,
 		})
 	}
 

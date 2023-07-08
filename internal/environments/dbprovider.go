@@ -70,7 +70,7 @@ func (ep *dbEnvironmentsProvider) IsOwnerLimited(ctx context.Context, owner stri
 		limit = dbOwnerLimit.EnvLimit
 	}
 
-	ownerEnvs, err := ep.db.FindEnvironmentsByOwner(owner)
+	ownerEnvs, err := ep.db.FindEnvironmentsByOwner(owner, database.FindEnvironmentsOptions{})
 	if err != nil {
 		return false, errors.Wrapf(err, "fail to get current environments for owner %s", owner)
 	}

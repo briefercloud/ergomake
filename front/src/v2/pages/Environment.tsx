@@ -153,7 +153,7 @@ const Details = ({ profile }: Props) => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 bg-white sm:grid-cols-2 lg:grid-cols-4">
+        <div className="hidden grid grid-cols-1 bg-white sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, statIdx) => (
             <div
               key={stat.name}
@@ -184,7 +184,7 @@ const Details = ({ profile }: Props) => {
 
       {/* Secondary navigation */}
       <nav className="flex border-y border-gray-200">
-        <ul className="flex justify-between min-w-full flex-none text-sm font-semibold leading-6 text-gray-800 [&>li]:h-full [&>li]:flex [&>li]:grow [&>li]:items-center  [&>li]:justify-center items-center">
+        <ul className="flex justify-between min-w-full flex-none text-sm font-semibold leading-6 text-gray-800 [&>li]:h-full [&>li]:flex [&>li]:grow [&>li]:items-center  [&>li]:justify-center items-center [&>li]:flex-1">
           <li className="bg-red">
             <Select options={selectOptions} onChange={setCurrentServiceIndex} />
           </li>

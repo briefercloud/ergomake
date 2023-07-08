@@ -247,7 +247,7 @@ type TopNavbarProps = {
 
 const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
   return (
-    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none md:border-0 md:bg-transparent sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
+    <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none md:bg-gray-50 sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
       <button
         type="button"
         className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
@@ -333,18 +333,14 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
           closeSidebar={() => setSidebarOpen(false)}
         />
 
-        <div className="lg:pl-72">
+        <div className="lg:pl-72 h-screen flex flex-col overflow-hidden">
           <TopNavbar
             pages={pages}
             profile={profile}
             openSidebar={() => setSidebarOpen(true)}
           />
 
-          <div className="invisible md:visible flex items-center">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-
-          <main>{children}</main>
+          <main className="flex flex-col h-full">{children}</main>
         </div>
       </div>
     </>

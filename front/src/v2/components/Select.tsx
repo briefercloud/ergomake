@@ -6,18 +6,25 @@ import { classNames } from '../utils'
 
 type SelectOptions = {
   options: Array<{ label: string; value: number }>
+  onChange: (value: number) => void
 }
 
-const Select = ({ options }: SelectOptions) => {
+const Select = ({ options, onChange }: SelectOptions) => {
   const defaultOption = options[0]
+
   if (!defaultOption) {
     throw new Error('Select component requires at least one option')
   }
 
   const [selected, setSelected] = useState(defaultOption)
 
+  const actualChangeHandler = (value: number) => {
+    setSelected(options.find((option) => option.value === value)!)
+    onChange(value)
+  }
+
   return (
-    <Listbox value={selected} onChange={setSelected}>
+    <Listbox value={selected.value} onChange={actualChangeHandler}>
       {({ open }) => (
         <div className="relative w-full bg-primary-400/10 border-r border-primary-400/30">
           <Listbox.Button className="relative w-full cursor-default py-1.5 pl-3 pr-10 text-left text-primary-500 focus:bg-primary-400/20 sm:text-sm sm:leading-6">

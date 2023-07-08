@@ -78,7 +78,7 @@ const Environments = ({ profile }: Props) => {
       new Date(env.createdAt),
       new Date()
     )}`,
-    url: `/v2/gh/${owner.login}/repos/${params.repo}/envs/${env.branch}`,
+    url: `/v2/gh/${owner.login}/repos/${params.repo}/envs/${env.id}`,
   }))
 
   const pages = [

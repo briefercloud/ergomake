@@ -192,7 +192,9 @@ const Details = ({ profile }: Props) => {
             <li
               key={item.name}
               className={classNames(
-                item.logType === logType ? 'text-primary-400' : 'text-gray-400',
+                item.logType === logType
+                  ? 'text-primary-400 shadow-inner bg-gray-100'
+                  : 'text-gray-400',
                 'hover:bg-gray-100 hover:cursor-pointer'
               )}
               onClick={() => setLogsType(item.logType)}

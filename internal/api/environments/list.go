@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-github/v52/github"
 
 	"github.com/ergomake/ergomake/internal/api/auth"
+	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/logger"
 )
 
@@ -36,7 +37,7 @@ func (er *environmentsRouter) list(c *gin.Context) {
 		return
 	}
 
-	ownerEnvs, err := er.db.FindEnvironmentsByOwner(owner)
+	ownerEnvs, err := er.db.FindEnvironmentsByOwner(owner, database.FindEnvironmentsOptions{})
 	if err != nil {
 		logger.Ctx(c).Err(err).Msgf("fail to find environments for owner %s", owner)
 		c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))

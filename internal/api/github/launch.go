@@ -36,7 +36,7 @@ func (r *githubRouter) launchEnvironment(ctx context.Context, event *LaunchEnvir
 			event.Owner,
 			event.Repo,
 			event.Branch,
-			database.FindEnvironmentsByPullRequestOptions{IncludeDeleted: true},
+			database.FindEnvironmentsOptions{IncludeDeleted: true},
 		)
 		if err != nil {
 			return errors.Wrap(err, "fail to find previous envs of pull request")

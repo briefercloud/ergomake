@@ -79,7 +79,7 @@ func (db *DB) FindEnvironmentByID(id uuid.UUID) (Environment, error) {
 	return env, result.Error
 }
 
-type FindEnvironmentsByPullRequestOptions struct {
+type FindEnvironmentsOptions struct {
 	IncludeDeleted bool
 }
 
@@ -88,7 +88,7 @@ func (db *DB) FindEnvironmentsByPullRequest(
 	owner string,
 	repo string,
 	branch string,
-	options FindEnvironmentsByPullRequestOptions,
+	options FindEnvironmentsOptions,
 ) ([]Environment, error) {
 	envs := make([]Environment, 0)
 	where := map[string]interface{}{
@@ -127,12 +127,19 @@ func (db *DB) DeleteEnvironmentByPullRequest(pullRequest int, owner, repo, branc
 	return result.Error
 }
 
-func (db *DB) FindEnvironmentsByOwner(owner string) ([]Environment, error) {
+func (db *DB) FindEnvironmentsByOwner(owner string, options FindEnvironmentsOptions) ([]Environment, error) {
 	envs := make([]Environment, 0)
-	result := db.
-		Where(map[string]interface{}{
-			"owner": owner,
-		}).Order("created_at DESC").
+
+	where := map[string]interface{}{
+		"owner": owner,
+	}
+
+	result := db.DB
+	if options.IncludeDeleted {
+		result = db.Unscoped()
+	}
+
+	result = result.Where(where).Order("created_at DESC").
 		Preload("Services", func(db *gorm.DB) *gorm.DB {
 			return db.Order("services.index ASC")
 		}).

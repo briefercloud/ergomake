@@ -135,7 +135,7 @@ func waitForNewDBEnvironment(db *database.DB, pr int, owner, repo, branch string
 	timeout := time.After(10 * time.Second)
 
 	for {
-		envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsByPullRequestOptions{})
+		envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +178,7 @@ func waitForDBEnvironmentDeletion(db *database.DB, pr int, owner, repo, branch s
 	// wait at most 10 seconds for all envs to be deleted from db
 	timeout := time.After(10 * time.Second)
 	for {
-		envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsByPullRequestOptions{})
+		envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsOptions{})
 		if err != nil {
 			return err
 		}
@@ -420,7 +420,7 @@ func TestV2GithubWebhook(t *testing.T) {
 				branch := payload.GetPullRequest().GetHead().GetRef()
 				pr := payload.GetPullRequest().GetNumber()
 
-				envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsByPullRequestOptions{})
+				envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsOptions{})
 				require.NoError(t, err)
 				namespaces := []string{}
 				for _, env := range envs {
@@ -493,7 +493,7 @@ func TestV2GithubWebhook(t *testing.T) {
 				branch := payload.GetPullRequest().GetHead().GetRef()
 				pr := payload.GetPullRequest().GetNumber()
 
-				envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsByPullRequestOptions{})
+				envs, err := db.FindEnvironmentsByPullRequest(pr, owner, repo, branch, database.FindEnvironmentsOptions{})
 				require.NoError(t, err)
 				require.Greater(t, len(envs), 0)
 				namespaces := []string{}

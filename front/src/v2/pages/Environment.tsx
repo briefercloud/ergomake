@@ -1,4 +1,5 @@
 import AnsiToHTML from 'ansi-to-html'
+import * as dfns from 'date-fns'
 import { useCallback, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
@@ -144,12 +145,15 @@ const Details = ({ profile }: Props) => {
               </h1>
             </div>
             <p className="mt-2 text-xs leading-6 text-gray-400">
-              Deploys from GitHub via main branch
+              Last deployed at{' '}
+              {dfns.formatRelative(new Date(environment.createdAt), new Date())}
             </p>
           </div>
+          {/*
           <div className="order-first flex-none rounded-full bg-primary-400/10 px-2 py-1 text-xs font-medium text-primary-400 ring-1 ring-inset ring-primary-400/30 sm:order-none">
             Production
           </div>
+          */}
         </div>
 
         {/* Stats */}

@@ -85,7 +85,7 @@ const Environments = ({ profile }: Props) => {
     name: env.branch,
     statusBall: <StatusBall status={env.status} />,
     descriptionLeft: EnvironmentStatusText[env.status],
-    descriptionRight: `Created ${dfns.formatRelative(
+    descriptionRight: `Last deployed at ${dfns.formatRelative(
       new Date(env.createdAt),
       new Date()
     )}`,

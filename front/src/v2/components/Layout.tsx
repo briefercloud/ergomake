@@ -31,10 +31,7 @@ const teams = [
 
 const logoutUrl = `${process.env.REACT_APP_ERGOMAKE_API}/v2/auth/logout?redirectUrl=${window.location.protocol}//${window.location.host}`
 
-const userNavigation = [
-  { name: 'Your profile', href: '#' },
-  { name: 'Sign out', href: logoutUrl },
-]
+const userNavigation = [{ name: 'Sign out', href: logoutUrl }]
 
 const sidebarColor = `bg-white shadow`
 
@@ -247,7 +244,7 @@ type TopNavbarProps = {
 
 const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
   return (
-    <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none md:bg-gray-50 sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
+    <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
       <button
         type="button"
         className="-m-2.5 p-2.5 text-gray-700 lg:hidden"

@@ -9,6 +9,7 @@ import { useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
 import Layout from '../components/Layout'
 import List from '../components/List'
+import TableInput from '../components/TableInput'
 import { classNames } from '../utils'
 
 interface Props {
@@ -33,6 +34,13 @@ const EnvironmentStatusText: Record<EnvironmentStatus, string> = {
   stale: 'Sleeping',
 }
 
+type TabName = 'branches' | 'envVars'
+
+const secondaryNavigation: Array<{ name: string; tabName: TabName }> = [
+  { name: 'Branches', tabName: 'branches' },
+  { name: 'Environment Variables', tabName: 'envVars' },
+]
+
 const StatusBall = ({ status }: { status: EnvironmentStatus }) => {
   return (
     <div
@@ -48,6 +56,9 @@ const StatusBall = ({ status }: { status: EnvironmentStatus }) => {
 
 const Environments = ({ profile }: Props) => {
   const params = useParams()
+
+  const [currentTab, setCurrentTab] = useState<TabName>('branches')
+
   const ownersRes = useOwners()
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
   const owner = useMemo(
@@ -92,7 +103,41 @@ const Environments = ({ profile }: Props) => {
 
   return (
     <Layout profile={profile} pages={pages}>
-      <List items={envItems} />
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+          <div className="flex items-center gap-x-3 h-20">
+            <h1 className="flex text-2xl font-bold tracking-tight text-gray-600 sm:text-4xl">
+              <span className="font-semibold text-gray-800">{params.repo}</span>
+            </h1>
+          </div>
+
+          <div className="order-first flex-none rounded-full bg-primary-400/10 px-2 py-1 text-xs font-medium text-primary-400 ring-1 ring-inset ring-primary-400/30 sm:order-none">
+            Configured
+          </div>
+        </div>
+
+        <nav className="flex">
+          <ul className="flex min-w-full flex-none gap-x-6 px-4 text-sm font-semibold leading-6 text-gray-400 sm:px-6 lg:px-8">
+            {secondaryNavigation.map((item) => (
+              <li
+                key={item.name}
+                className={classNames(
+                  item.tabName === currentTab
+                    ? 'text-primary-400 border-b-2 border-primary-400'
+                    : '',
+                  'pb-2 px-2 hover:text-primary-300 hover:border-primary-300 hover:cursor-pointer hover:border-primary-300'
+                )}
+                onClick={() => setCurrentTab(item.tabName)}
+              >
+                {item.name}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+
+      {currentTab === 'branches' ? <List items={envItems} /> : null}
+      {currentTab === 'envVars' ? <TableInput onSubmit={() => {}} /> : null}
     </Layout>
   )
 }

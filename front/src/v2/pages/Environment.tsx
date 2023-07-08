@@ -187,7 +187,7 @@ const Details = ({ profile }: Props) => {
       </header>
 
       {/* Secondary navigation */}
-      <nav className="flex border-y border-gray-200">
+      <nav className="flex border-y border-gray-200 border-b-0">
         <ul className="flex justify-between min-w-full flex-none text-sm font-semibold leading-6 text-gray-800 [&>li]:h-full [&>li]:flex [&>li]:grow [&>li]:items-center  [&>li]:justify-center items-center [&>li]:flex-1">
           <li className="bg-red">
             <Select options={selectOptions} onChange={setCurrentServiceIndex} />

@@ -2,6 +2,7 @@ import * as dfns from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import VariablesInput from '../../components/VariablesInput'
 import { EnvironmentStatus } from '../../hooks/useEnvironment'
 import { useEnvironmentsByRepo } from '../../hooks/useEnvironmentsByRepo'
 import { orElse } from '../../hooks/useHTTPRequest'
@@ -9,7 +10,6 @@ import { useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
 import Layout from '../components/Layout'
 import List from '../components/List'
-import TableInput from '../components/TableInput'
 import { classNames } from '../utils'
 
 interface Props {
@@ -58,48 +58,55 @@ const Environments = ({ profile }: Props) => {
   const params = useParams()
 
   const [currentTab, setCurrentTab] = useState<TabName>('branches')
-
   const ownersRes = useOwners()
-  const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
   const owner = useMemo(
     () =>
-      owners.find((org) => org.login === params.owner) ?? {
+      orElse(ownersRes, []).find((org) => org.login === params.owner) ?? {
         login: params.owner ?? '',
         avatar: '',
         isPaying: false,
       },
-    [owners, params.owner]
+    [ownersRes, params.owner]
   )
-
   const envsRes = useEnvironmentsByRepo(owner.login, params.repo ?? '')
-  const [search, setSearch] = useState('')
   const envs = useMemo(
     () =>
-      orElse(envsRes, [])
-        .filter((e) => search === '' || e.branch.includes(search))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [envsRes, search]
+      orElse(envsRes, []).sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt)
+      ),
+    [envsRes]
   )
 
-  const envItems = envs.map((env) => ({
-    name: env.branch,
-    statusBall: <StatusBall status={env.status} />,
-    descriptionLeft: EnvironmentStatusText[env.status],
-    descriptionRight: `Last deployed at ${dfns.formatRelative(
-      new Date(env.createdAt),
-      new Date()
-    )}`,
-    url: `/v2/gh/${owner.login}/repos/${params.repo}/envs/${env.id}`,
-  }))
+  const envItems = useMemo(
+    () =>
+      envs.map((env) => ({
+        name: env.branch,
+        statusBall: <StatusBall status={env.status} />,
+        descriptionLeft: EnvironmentStatusText[env.status],
+        descriptionRight: `Created ${dfns.formatRelative(
+          new Date(env.createdAt),
+          new Date()
+        )}`,
+        url: `/v2/gh/${owner.login}/repos/${params.repo}/envs/${env.id}`,
+      })),
+    [envs, owner.login, params.repo]
+  )
 
-  const pages = [
-    { name: 'Repositories', href: `/v2/gh/${owner.login}`, label: 'Projects' },
-    {
-      name: params.repo ?? '',
-      href: `/v2/gh/${owner.login}/repos/${params.repo}`,
-      label: params.repo ?? '',
-    },
-  ]
+  const pages = useMemo(
+    () => [
+      {
+        name: 'Repositories',
+        href: `/v2/gh/${owner.login}`,
+        label: 'Projects',
+      },
+      {
+        name: params.repo ?? '',
+        href: `/v2/gh/${owner.login}/repos/${params.repo}`,
+        label: params.repo ?? '',
+      },
+    ],
+    [owner.login, params.repo]
+  )
 
   return (
     <Layout profile={profile} pages={pages}>
@@ -132,8 +139,10 @@ const Environments = ({ profile }: Props) => {
         </nav>
       </div>
 
-      {currentTab === 'branches' ? <List items={envItems} /> : null}
-      {currentTab === 'envVars' ? <TableInput onSubmit={() => {}} /> : null}
+      {currentTab === 'branches' && <List items={envItems} />}
+      {currentTab === 'envVars' && (
+        <VariablesInput owner={owner.login} repo={params.repo ?? ''} />
+      )}
     </Layout>
   )
 }

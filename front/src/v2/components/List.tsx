@@ -11,9 +11,14 @@ type ListItem = {
 
 type ListProps = {
   items: ListItem[]
+  emptyState?: React.ReactNode
 }
 
-const List = ({ items }: ListProps) => {
+const List = ({ items, emptyState }: ListProps) => {
+  if (items.length === 0 && emptyState) {
+    return <>{emptyState}</>
+  }
+
   return (
     <ul>
       {items.map((item) => (

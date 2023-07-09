@@ -1,3 +1,4 @@
+import { CubeIcon } from '@heroicons/react/24/outline'
 import * as dfns from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
@@ -8,6 +9,7 @@ import { useEnvironmentsByRepo } from '../../hooks/useEnvironmentsByRepo'
 import { orElse } from '../../hooks/useHTTPRequest'
 import { useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
+import EmptyState from '../components/EmptyState'
 import Layout from '../components/Layout'
 import List from '../components/List'
 import { classNames } from '../utils'
@@ -108,6 +110,14 @@ const Environments = ({ profile }: Props) => {
     [owner.login, params.repo]
   )
 
+  const emptyStateComponent = (
+    <EmptyState
+      icon={CubeIcon}
+      title="No environments available"
+      description="Configure a permanent branch or create a pull-request to deploy an environment."
+    />
+  )
+
   return (
     <Layout profile={profile} pages={pages}>
       <div className="bg-white border-b border-gray-200">
@@ -139,7 +149,10 @@ const Environments = ({ profile }: Props) => {
         </nav>
       </div>
 
-      {currentTab === 'branches' && <List items={envItems} />}
+      {currentTab === 'branches' && (
+        <List items={envItems} emptyState={emptyStateComponent} />
+      )}
+
       {currentTab === 'envVars' && (
         <VariablesInput owner={owner.login} repo={params.repo ?? ''} />
       )}

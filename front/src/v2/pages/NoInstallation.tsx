@@ -1,5 +1,9 @@
 import { PlusIcon, UserPlusIcon } from '@heroicons/react/20/solid'
+import { useMemo } from 'react'
+import { Navigate } from 'react-router-dom'
 
+import { orElse } from '../../hooks/useHTTPRequest'
+import { useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
 import Layout, { installationUrl } from '../components/Layout'
 
@@ -8,6 +12,13 @@ interface NoInstallationProps {
 }
 
 const NoInstallation = ({ profile }: NoInstallationProps) => {
+  const ownersRes = useOwners()
+  const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
+
+  if (owners.length > 0 && owners[0] !== undefined) {
+    return <Navigate to={`/v2/gh/${owners[0].login}`} />
+  }
+
   return (
     <Layout profile={profile} pages={[]}>
       <div className="px-4 sm:px-6 lg:px-8 pt-6">

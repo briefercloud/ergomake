@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { orElse } from '../../hooks/useHTTPRequest'
 import { Owner, useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
+import BillingAlert from '../components/BillingAlert'
 import Logo from '../components/Logo'
 import WebsitePath, { Pages } from '../components/WebsitePath'
 import { classNames } from '../utils'
@@ -15,6 +16,7 @@ import { classNames } from '../utils'
 const navigation = [
   { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
 ]
+
 export const installationUrl =
   process.env.REACT_APP_INSTALLATION_URL ??
   'https://github.com/apps/ergomake/installations/new'
@@ -26,16 +28,11 @@ const userNavigation = [{ name: 'Sign out', href: logoutUrl }]
 const sidebarColor = `bg-white shadow`
 
 type DesktopSidebarProps = {
-  profile: Profile
   owners: Owner[]
   currentOwner: string
 }
 
-const DesktopSidebar = ({
-  profile,
-  owners,
-  currentOwner,
-}: DesktopSidebarProps) => {
+const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
   const navigate = useNavigate()
   const onChangeOwner = useCallback(
     (ownerName: string) => {
@@ -319,13 +316,14 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
   const ownersRes = useOwners()
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
 
+  const currentOwner = owners.find((o) => o.login === params.owner)
+
   return (
     <>
       <div>
         <DesktopSidebar
-          profile={profile}
           owners={owners}
-          currentOwner={params.owner ?? ''}
+          currentOwner={currentOwner?.login ?? ''}
         />
 
         <MobileSidebar
@@ -340,6 +338,9 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
             openSidebar={() => setSidebarOpen(true)}
           />
 
+          {currentOwner && currentOwner.isPaying && (
+            <BillingAlert owner={currentOwner.login} />
+          )}
           <main className="flex flex-col h-full">{children}</main>
         </div>
       </div>

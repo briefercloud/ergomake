@@ -82,32 +82,9 @@ const DesktopSidebar = ({
             </li>
             <li>
               <div className="text-xs font-semibold leading-6 text-gray-400">
-                Your organizations
+                Your accounts
               </div>
               <ul className="pt-2 space-y-1">
-                <li
-                  key={profile.name}
-                  className={classNames(
-                    profile.username === currentOwner
-                      ? 'text-primary-600'
-                      : 'text-gray-400',
-                    'group flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer'
-                  )}
-                  onClick={() => onChangeOwner(profile.username)}
-                >
-                  <img
-                    className={classNames(
-                      profile.username === currentOwner
-                        ? ''
-                        : 'opacity-50 grayscale',
-                      'inline-block h-6 w-6 rounded-md  group-hover:grayscale-0 group-hover:opacity-100'
-                    )}
-                    src={profile.avatar}
-                    alt=""
-                  />
-                  <span className="truncate">{profile.username}</span>
-                </li>
-
                 {owners.map((owner) => (
                   <li
                     key={owner.login}

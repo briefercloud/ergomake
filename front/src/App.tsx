@@ -12,8 +12,8 @@ import Registries from './pages/Registries'
 import EnvironmentV2 from './v2/pages/Environment'
 import EnvironmentsV2 from './v2/pages/Environments'
 import Login from './v2/pages/Login'
+import NoInstallationV2 from './v2/pages/NoInstallation'
 import ProjectsV2 from './v2/pages/Projects'
-import SuperTest from './v2/test'
 
 const router = createBrowserRouter([
   {
@@ -25,11 +25,6 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: '/supertest',
-    element: <SuperTest />,
-  },
-
-  {
     path: '/environments/:env',
     element: <PublicEnvironment />,
   },
@@ -38,6 +33,14 @@ const router = createBrowserRouter([
     element: (
       <RequireAuth>
         {(profile) => <NoInstallation profile={profile} />}
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/v2/gh',
+    element: (
+      <RequireAuth>
+        {(profile) => <NoInstallationV2 profile={profile} />}
       </RequireAuth>
     ),
   },

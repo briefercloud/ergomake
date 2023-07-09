@@ -110,10 +110,6 @@ const Environments = ({ profile }: Props) => {
               <span className="font-semibold text-gray-800">{params.repo}</span>
             </h1>
           </div>
-
-          <div className="order-first flex-none rounded-full bg-primary-400/10 px-2 py-1 text-xs font-medium text-primary-400 ring-1 ring-inset ring-primary-400/30 sm:order-none">
-            Configured
-          </div>
         </div>
 
         <nav className="flex">

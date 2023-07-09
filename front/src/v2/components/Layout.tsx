@@ -1,13 +1,12 @@
 import { Dialog, Menu, Transition } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
-import {
-  Bars3Icon,
-  FolderIcon,
-  LockClosedIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline'
-import { Fragment, useState } from 'react'
+import { PlusCircleIcon } from '@heroicons/react/24/outline'
+import { Bars3Icon, FolderIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Fragment, useCallback, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
+import { orElse } from '../../hooks/useHTTPRequest'
+import { Owner, useOwners } from '../../hooks/useOwners'
 import { Profile } from '../../hooks/useProfile'
 import Logo from '../components/Logo'
 import WebsitePath, { Pages } from '../components/WebsitePath'
@@ -15,19 +14,10 @@ import { classNames } from '../utils'
 
 const navigation = [
   { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
-  {
-    name: 'Private registries',
-    href: '#',
-    icon: LockClosedIcon,
-    current: false,
-  },
 ]
-const teams = [
-  { id: 1, name: 'Heroicons', href: '#', initial: 'H', current: true },
-  { id: 2, name: 'Tailwind Labs', href: '#', initial: 'T', current: false },
-  { id: 3, name: 'Workcation', href: '#', initial: 'W', current: false },
-  { id: 4, name: 'Add organization', href: '#', initial: '+', current: false },
-]
+export const installationUrl =
+  process.env.REACT_APP_INSTALLATION_URL ??
+  'https://github.com/apps/ergomake/installations/new'
 
 const logoutUrl = `${process.env.REACT_APP_ERGOMAKE_API}/v2/auth/logout?redirectUrl=${window.location.protocol}//${window.location.host}`
 
@@ -35,7 +25,25 @@ const userNavigation = [{ name: 'Sign out', href: logoutUrl }]
 
 const sidebarColor = `bg-white shadow`
 
-const DesktopSidebar = () => {
+type DesktopSidebarProps = {
+  profile: Profile
+  owners: Owner[]
+  currentOwner: string
+}
+
+const DesktopSidebar = ({
+  profile,
+  owners,
+  currentOwner,
+}: DesktopSidebarProps) => {
+  const navigate = useNavigate()
+  const onChangeOwner = useCallback(
+    (ownerName: string) => {
+      navigate(`/v2/gh/${ownerName}`)
+    },
+    [navigate]
+  )
+
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
       <div
@@ -57,16 +65,13 @@ const DesktopSidebar = () => {
                       href={item.href}
                       className={classNames(
                         item.current
-                          ? 'text-primary-600 bg-gray-50'
-                          : 'text-gray-400 ',
-                        'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold hover:text-primary-600 hover:bg-gray-50'
+                          ? 'text-gray-50 bg-primary-600'
+                          : 'text-gray-400',
+                        'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold hover:bg-primary-400 hover:text-gray-50'
                       )}
                     >
                       <item.icon
-                        className={classNames(
-                          item.current ? 'text-primary-600' : 'text-gray-400',
-                          'h-6 w-6 shrink-0 group-hover:text-primary-600'
-                        )}
+                        className={'h-6 w-6 shrink-0'}
                         aria-hidden="true"
                       />
                       {item.name}
@@ -79,23 +84,61 @@ const DesktopSidebar = () => {
               <div className="text-xs font-semibold leading-6 text-gray-400">
                 Your organizations
               </div>
-              <ul className="pt-2">
-                {teams.map((team) => (
-                  <li key={team.name}>
-                    <a
-                      href={team.href}
+              <ul className="pt-2 space-y-1">
+                <li
+                  key={profile.name}
+                  className={classNames(
+                    profile.username === currentOwner
+                      ? 'text-primary-600'
+                      : 'text-gray-400',
+                    'group flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer'
+                  )}
+                  onClick={() => onChangeOwner(profile.username)}
+                >
+                  <img
+                    className={classNames(
+                      profile.username === currentOwner
+                        ? ''
+                        : 'opacity-50 grayscale',
+                      'inline-block h-6 w-6 rounded-md  group-hover:grayscale-0 group-hover:opacity-100'
+                    )}
+                    src={profile.avatar}
+                    alt=""
+                  />
+                  <span className="truncate">{profile.username}</span>
+                </li>
+
+                {owners.map((owner) => (
+                  <li
+                    key={owner.login}
+                    className={classNames(
+                      owner.login === currentOwner
+                        ? 'text-primary-600'
+                        : 'text-gray-400',
+                      'group flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer'
+                    )}
+                    onClick={() => onChangeOwner(owner.login)}
+                  >
+                    <img
+                      src={owner.avatar}
+                      alt=""
                       className={classNames(
-                        team.current ? 'text-primary-600' : 'text-gray-400',
-                        'group flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold group-hover:text-primary-400'
+                        owner.login === currentOwner
+                          ? ''
+                          : 'opacity-50 grayscale',
+                        'inline-block h-6 w-6 rounded-md  group-hover:grayscale-0 group-hover:opacity-100'
                       )}
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-primary-400 bg-primary-500 text-[0.625rem] font-medium text-white">
-                        {team.initial}
-                      </span>
-                      <span className="truncate">{team.name}</span>
-                    </a>
+                    />
+                    <span className="truncate">{owner.login}</span>
                   </li>
                 ))}
+
+                <li className="group text-gray-400 flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer">
+                  <a href={installationUrl} className="flex gap-x-3">
+                    <PlusCircleIcon className="h-6 w-6" aria-hidden="true" />
+                    Add organization
+                  </a>
+                </li>
               </ul>
             </li>
           </ul>
@@ -200,31 +243,6 @@ const MobileSidebar = ({ sidebarOpen, closeSidebar }: MobileSidebarProps) => {
                         ))}
                       </ul>
                     </li>
-                    <li>
-                      <div className="text-xs font-semibold leading-6 text-primary-200">
-                        Your teams
-                      </div>
-                      <ul className="-mx-2 mt-2 space-y-1">
-                        {teams.map((team) => (
-                          <li key={team.name}>
-                            <a
-                              href={team.href}
-                              className={classNames(
-                                team.current
-                                  ? 'text-primary-400'
-                                  : 'text-gray-400 hover:text-white',
-                                'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
-                              )}
-                            >
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-primary-400 bg-primary-500 text-[0.625rem] font-medium text-white">
-                                {team.initial}
-                              </span>
-                              <span className="truncate">{team.name}</span>
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
                   </ul>
                 </nav>
               </div>
@@ -318,12 +336,20 @@ type LayoutProps = {
 }
 
 const Layout = ({ profile, children, pages }: LayoutProps) => {
+  const params = useParams<{ owner: string }>()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const ownersRes = useOwners()
+  const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
 
   return (
     <>
       <div>
-        <DesktopSidebar />
+        <DesktopSidebar
+          profile={profile}
+          owners={owners}
+          currentOwner={params.owner ?? ''}
+        />
 
         <MobileSidebar
           sidebarOpen={sidebarOpen}

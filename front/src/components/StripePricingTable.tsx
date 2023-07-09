@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 interface Props {
   owner: string
 }
+
 const StripePricingTable = (props: Props) => {
   useEffect(() => {
     const script = document.createElement('script')
@@ -15,6 +16,8 @@ const StripePricingTable = (props: Props) => {
       document.body.removeChild(script)
     }
   }, [])
+
+  console.log(props.owner)
 
   const pricingTableId = process.env.REACT_APP_STRIPE_PRICING_TABLE_ID
   const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY

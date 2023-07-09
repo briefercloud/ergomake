@@ -45,7 +45,7 @@ type TableInputProps = {
   cells: number
   labels: string[]
   placeholders: string[]
-  onAdd: (value: string[]) => void
+  onAdd: (value: string[]) => boolean
   onRemove: (i: number) => void
   onSave: () => void
 }
@@ -64,12 +64,15 @@ const TableInput = (props: TableInputProps) => {
     (e) => {
       e.preventDefault()
 
-      if (current.some((c) => c.trim() === '')) {
+      const value = current.map((c) => c.trim())
+      if (value.some((c) => c === '')) {
         return
       }
 
-      onAdd(current)
-      setCurrent((c) => c.map(() => ''))
+      const added = onAdd(value)
+      if (added) {
+        setCurrent((c) => c.map(() => ''))
+      }
     },
     [onAdd, current, setCurrent]
   )

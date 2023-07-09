@@ -7,6 +7,8 @@ import TableInput from '../v2/components/TableInput'
 const labels = ['Name', 'Value']
 const placeholders = ['EXAMPLE_VAR', 'value123']
 
+const envVarRegex = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+
 interface Props {
   owner: string
   repo: string
@@ -28,12 +30,16 @@ function VariablesInput(props: Props) {
 
   const onAdd = useCallback(
     ([name, value]: string[]) => {
-      console.log({ name, value })
       if (!name || !value) {
-        return
+        return false
+      }
+
+      if (!envVarRegex.test(name)) {
+        return false
       }
 
       setVariables((vars) => [{ name, value }].concat(vars))
+      return true
     },
     [setVariables]
   )

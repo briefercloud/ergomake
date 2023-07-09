@@ -338,10 +338,13 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
             openSidebar={() => setSidebarOpen(true)}
           />
 
-          {currentOwner && currentOwner.isPaying && (
-            <BillingAlert owner={currentOwner.login} />
-          )}
-          <main className="flex flex-col h-full">{children}</main>
+          <main className="flex flex-col h-full">
+            {currentOwner && currentOwner.isPaying && (
+              <BillingAlert owner={currentOwner.login} />
+            )}
+
+            {children}
+          </main>
         </div>
       </div>
     </>

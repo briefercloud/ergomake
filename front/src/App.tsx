@@ -14,6 +14,7 @@ import EnvironmentsV2 from './v2/pages/Environments'
 import Login from './v2/pages/Login'
 import NoInstallationV2 from './v2/pages/NoInstallation'
 import ProjectsV2 from './v2/pages/Projects'
+import PurchaseV2 from './v2/pages/Purchase'
 
 const router = createBrowserRouter([
   {
@@ -92,6 +93,12 @@ const router = createBrowserRouter([
     path: '/gh/:owner/registries',
     element: (
       <RequireAuth>{(profile) => <Registries profile={profile} />}</RequireAuth>
+    ),
+  },
+  {
+    path: '/v2/gh/:owner/purchase',
+    element: (
+      <RequireAuth>{(profile) => <PurchaseV2 profile={profile} />}</RequireAuth>
     ),
   },
   {

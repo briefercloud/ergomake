@@ -1,20 +1,40 @@
-import React from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { useMemo } from 'react'
+import { useParams } from 'react-router-dom'
 
+import Layout from '../components/Layout'
+import StripePricingTable from '../components/StripePricingTable'
+import { orElse } from '../hooks/useHTTPRequest'
+import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
-import Layout from '../layouts/Purchase'
 
 interface Props {
   profile: Profile
 }
-function Environments(props: Props) {
-  const params = useParams()
 
-  if (!params.owner) {
-    return <Navigate to="/" />
-  }
+function Purchase({ profile }: Props) {
+  const params = useParams<{ owner: string }>()
+  const ownersRes = useOwners()
+  const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
+  const currentOwner = owners.find((o) => o.login === params.owner)
 
-  return <Layout profile={props.profile} owner={params.owner} />
+  const pages = [
+    {
+      name: 'Purchase',
+      href: `/gh/${params.owner}/purchase`,
+      label: 'Repositories',
+    },
+  ]
+
+  return (
+    <Layout profile={profile} pages={pages}>
+      <div className="flex flex-col pt-8 px-8 space-y-12 rounded">
+        <h1 className="text-gray-500 text-center font-bold text-4xl">
+          Upgrade your plan for {currentOwner?.login}
+        </h1>
+        <StripePricingTable owner={currentOwner?.login ?? ''} />
+      </div>
+    </Layout>
+  )
 }
 
-export default Environments
+export default Purchase

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { isLoading, isSuccess } from '../hooks/useHTTPRequest'
 import { Variable, useVariables } from '../hooks/useVariables'
-import TableInput from '../v2/components/TableInput'
+import TableInput from '../components/TableInput'
 
 const labels = ['Name', 'Value']
 const placeholders = ['EXAMPLE_VAR', 'value123']

@@ -1,24 +1,29 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 
-import { isLoading, orElse } from '../hooks/useHTTPRequest'
-import { Owner, useOwners } from '../hooks/useOwners'
+import Layout from '../components/Layout'
+import RepositoryList from '../components/RepositoryList'
+import { orElse } from '../hooks/useHTTPRequest'
+import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { useReposByOwner } from '../hooks/useReposByOwner'
-import Layout from '../layouts/Projects'
-import Loading from './Loading'
 
 interface Props {
   profile: Profile
 }
 
-function Projects({ profile }: Props) {
+const Projects = ({ profile }: Props) => {
   const ownersRes = useOwners()
   const params = useParams<{ owner: string }>()
 
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
 
-  const owner = owners.find((o) => o.login === params.owner)
+  const owner =
+    owners.find((o) => o.login === params.owner)?.login ?? profile.username
+
+  const pages = [
+    { name: 'Repositories', href: `/gh/${owner}`, label: 'Projects' },
+  ]
 
   const reposRes = useReposByOwner(params.owner ?? profile.username)
   const [search, setSearch] = useState('')
@@ -33,34 +38,10 @@ function Projects({ profile }: Props) {
     ]
   }, [reposRes, search])
 
-  const navigate = useNavigate()
-  const onChangeOwner = useCallback(
-    (owner: Owner) => {
-      navigate(`/gh/${owner.login}`)
-    },
-    [navigate]
-  )
-
-  if (!owner && isLoading(ownersRes)) {
-    return <Loading />
-  }
-
-  if (!owner) {
-    return <Navigate to="/" />
-  }
-
   return (
-    <Layout
-      profile={profile}
-      owners={owners}
-      owner={owner}
-      onChangeOwner={onChangeOwner}
-      loadingRepos={isLoading(reposRes)}
-      repositories={repos}
-      hasProjects={hasProjects}
-      search={search}
-      onChangeSearch={setSearch}
-    />
+    <Layout profile={profile} pages={pages}>
+      <RepositoryList repos={repos} />
+    </Layout>
   )
 }
 

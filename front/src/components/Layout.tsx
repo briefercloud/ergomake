@@ -2,16 +2,16 @@ import { Dialog, Menu, Transition } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { PlusCircleIcon } from '@heroicons/react/24/outline'
 import { Bars3Icon, FolderIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import classNames from 'classnames'
 import { Fragment, useCallback, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { orElse } from '../../hooks/useHTTPRequest'
-import { Owner, useOwners } from '../../hooks/useOwners'
-import { Profile } from '../../hooks/useProfile'
 import BillingAlert from '../components/BillingAlert'
 import Logo from '../components/Logo'
 import WebsitePath, { Pages } from '../components/WebsitePath'
-import { classNames } from '../utils'
+import { orElse } from '../hooks/useHTTPRequest'
+import { Owner, useOwners } from '../hooks/useOwners'
+import { Profile } from '../hooks/useProfile'
 
 const navigation = [
   { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
@@ -36,7 +36,7 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
   const navigate = useNavigate()
   const onChangeOwner = useCallback(
     (ownerName: string) => {
-      navigate(`/v2/gh/${ownerName}`)
+      navigate(`/gh/${ownerName}`)
     },
     [navigate]
   )

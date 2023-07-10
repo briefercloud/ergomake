@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 
 import { fold } from '../hooks/useHTTPRequest'
 import { Profile, useProfile } from '../hooks/useProfile'
-import ErrorLayout from '../layouts/Error'
+import ErrorLayout from '../pages/Error'
 import Loading from '../pages/Loading'
 
 interface RequireAuthProps {

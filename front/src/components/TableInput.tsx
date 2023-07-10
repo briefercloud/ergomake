@@ -2,7 +2,7 @@ import { TrashIcon } from '@heroicons/react/24/outline'
 import classNames from 'classnames'
 import { useCallback, useState } from 'react'
 
-import Button from '../../components/ButtonV2'
+import Button from '../components/Button'
 
 type InputProps = {
   label: string

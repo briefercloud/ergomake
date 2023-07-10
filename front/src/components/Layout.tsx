@@ -339,7 +339,7 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
           />
 
           <main className="flex flex-col h-full">
-            {currentOwner && currentOwner.isPaying && (
+            {currentOwner && !currentOwner.isPaying && (
               <BillingAlert owner={currentOwner.login} />
             )}
 

@@ -960,14 +960,6 @@ func (c *gitCompose) addResourceLimits(deployment *appsv1.Deployment) {
 			corev1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			corev1.ResourceMemory:           resource.MustParse("1Gi"),
 		}
-
-		if strings.ToLower(c.owner) == "writesonic" {
-			service, ok := deployment.Labels["preview.ergomake.dev/service"]
-			if ok && service == "api" {
-				podSpec.Containers[i].Resources.Limits[corev1.ResourceMemory] = resource.MustParse("4Gi")
-				podSpec.Containers[i].Resources.Requests[corev1.ResourceMemory] = resource.MustParse("4Gi")
-			}
-		}
 	}
 }
 

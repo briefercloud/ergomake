@@ -43,5 +43,6 @@ func (ar *authRouter) profile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"avatar":   user.GetAvatarURL(),
 		"username": user.GetLogin(),
+		"name":     user.GetName(),
 	})
 }

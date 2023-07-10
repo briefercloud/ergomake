@@ -26,10 +26,9 @@ module.exports = {
           light: 'rgb(var(--tw-color-primary-light) / <alpha-value>)',
         },
         dark: '#040404',
-        white: '#f2f2f2',
         outcolor: '#4a5953',
       },
     },
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [require('@tailwindcss/typography'), require('@tailwindcss/forms')],
 }

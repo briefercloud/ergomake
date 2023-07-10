@@ -10,6 +10,7 @@ import {
 import { Owner, useOwners } from './useOwners'
 
 export type Profile = {
+  name: string
   username: string
   avatar: string
   owners: Owner[]

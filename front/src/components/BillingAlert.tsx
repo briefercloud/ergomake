@@ -1,16 +1,16 @@
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
-import React from 'react'
 import { Link } from 'react-router-dom'
 
 interface Props {
   owner: string
 }
-function Alert(props: Props) {
+
+const BillingAlert = (props: Props) => {
   return (
-    <div className="bg-zinc-900 text-gray-300 p-4 rounded-lg flex space-x-2 items-center justify-center">
+    <div className="bg-yellow-100/50 text-gray-300 p-4 border-b border-b-gray-200 flex space-x-2 items-center justify-center font-bold">
       <ExclamationTriangleIcon className="w-6 h-6 inline-block text-yellow-500" />
-      <span>
-        On a free plan you can't have more than three previews at once.{' '}
+      <span className="text-gray-600">
+        On a free plan you can only have three simultaneous preview links.{' '}
         <Link
           className="text-primary-500 hover:underline hover:text-primary-400"
           to={`/gh/${props.owner}/purchase`}
@@ -22,4 +22,4 @@ function Alert(props: Props) {
   )
 }
 
-export default Alert
+export default BillingAlert

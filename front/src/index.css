@@ -2,11 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  height: 100vh;
+}
+
 body {
   margin: 0;
-  background-color: #121212;
+  height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100vh;
 }
 
 code {

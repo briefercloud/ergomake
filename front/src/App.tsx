@@ -1,15 +1,13 @@
-import React from 'react'
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import { RequireAuth, RequireNoAuth } from './components/RequireAuth'
+import PublicEnvironment from './pages/PublicEnvironment'
 import Environment from './pages/Environment'
 import Environments from './pages/Environments'
 import Login from './pages/Login'
 import NoInstallation from './pages/NoInstallation'
 import Projects from './pages/Projects'
-import PublicEnvironment from './pages/PublicEnvironment'
 import Purchase from './pages/Purchase'
-import Registries from './pages/Registries'
 
 const router = createBrowserRouter([
   {
@@ -52,12 +50,6 @@ const router = createBrowserRouter([
       <RequireAuth>
         {(profile) => <Environment profile={profile} />}
       </RequireAuth>
-    ),
-  },
-  {
-    path: '/gh/:owner/registries',
-    element: (
-      <RequireAuth>{(profile) => <Registries profile={profile} />}</RequireAuth>
     ),
   },
   {

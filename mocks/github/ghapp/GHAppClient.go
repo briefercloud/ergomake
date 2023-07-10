@@ -117,6 +117,66 @@ func (_c *GHAppClient_CreateCommitStatus_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// CreatePullRequest provides a mock function with given fields: ctx, owner, repo, branchPrefix, changes, title, description
+func (_m *GHAppClient) CreatePullRequest(ctx context.Context, owner string, repo string, branchPrefix string, changes map[string]string, title string, description string) (*github.PullRequest, error) {
+	ret := _m.Called(ctx, owner, repo, branchPrefix, changes, title, description)
+
+	var r0 *github.PullRequest
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string, string, string) (*github.PullRequest, error)); ok {
+		return rf(ctx, owner, repo, branchPrefix, changes, title, description)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string, string, string) *github.PullRequest); ok {
+		r0 = rf(ctx, owner, repo, branchPrefix, changes, title, description)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*github.PullRequest)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, map[string]string, string, string) error); ok {
+		r1 = rf(ctx, owner, repo, branchPrefix, changes, title, description)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GHAppClient_CreatePullRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreatePullRequest'
+type GHAppClient_CreatePullRequest_Call struct {
+	*mock.Call
+}
+
+// CreatePullRequest is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+//   - repo string
+//   - branchPrefix string
+//   - changes map[string]string
+//   - title string
+//   - description string
+func (_e *GHAppClient_Expecter) CreatePullRequest(ctx interface{}, owner interface{}, repo interface{}, branchPrefix interface{}, changes interface{}, title interface{}, description interface{}) *GHAppClient_CreatePullRequest_Call {
+	return &GHAppClient_CreatePullRequest_Call{Call: _e.mock.On("CreatePullRequest", ctx, owner, repo, branchPrefix, changes, title, description)}
+}
+
+func (_c *GHAppClient_CreatePullRequest_Call) Run(run func(ctx context.Context, owner string, repo string, branchPrefix string, changes map[string]string, title string, description string)) *GHAppClient_CreatePullRequest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(map[string]string), args[5].(string), args[6].(string))
+	})
+	return _c
+}
+
+func (_c *GHAppClient_CreatePullRequest_Call) Return(_a0 *github.PullRequest, _a1 error) *GHAppClient_CreatePullRequest_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *GHAppClient_CreatePullRequest_Call) RunAndReturn(run func(context.Context, string, string, string, map[string]string, string, string) (*github.PullRequest, error)) *GHAppClient_CreatePullRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DoesBranchExist provides a mock function with given fields: ctx, owner, repo, branch, branchOwner
 func (_m *GHAppClient) DoesBranchExist(ctx context.Context, owner string, repo string, branch string, branchOwner string) (bool, error) {
 	ret := _m.Called(ctx, owner, repo, branch, branchOwner)

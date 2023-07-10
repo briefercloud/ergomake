@@ -1,12 +1,14 @@
 import { PlusIcon } from '@heroicons/react/20/solid'
-import { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useCallback, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
+import ConfigureRepoModal from '../components/ConfigureRepoModal'
 import Layout, { installationUrl } from '../components/Layout'
 import RepositoryList from '../components/RepositoryList'
 import { orElse } from '../hooks/useHTTPRequest'
 import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
+import { Repo } from '../hooks/useRepo'
 import { useReposByOwner } from '../hooks/useReposByOwner'
 
 interface Props {
@@ -14,7 +16,9 @@ interface Props {
 }
 
 const Projects = ({ profile }: Props) => {
+  const [configuring, setConfiguring] = useState<Repo | null>(null)
   const ownersRes = useOwners()
+  const navigate = useNavigate()
   const params = useParams<{ owner: string }>()
 
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
@@ -33,8 +37,20 @@ const Projects = ({ profile }: Props) => {
     return repos.sort((a, b) => a.name.localeCompare(b.name))
   }, [reposRes])
 
+  const onCloseConfiguring = useCallback(
+    (success: boolean) => {
+      if (success && configuring) {
+        navigate(`/gh/${owner}/repos/${configuring.name}`)
+      }
+
+      setConfiguring(null)
+    },
+    [configuring, navigate, owner, setConfiguring]
+  )
+
   return (
     <Layout profile={profile} pages={pages}>
+      <ConfigureRepoModal repo={configuring} onClose={onCloseConfiguring} />
       <div className="bg-white border-b border-gray-200 flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8  ">
         <h1 className="flex text-2xl tracking-tight font-semibold text-gray-800 sm:text-4xl h-20 items-center">
           Repositories
@@ -49,7 +65,7 @@ const Projects = ({ profile }: Props) => {
         </a>
       </div>
 
-      <RepositoryList repos={repos} />
+      <RepositoryList repos={repos} onConfigure={setConfiguring} />
     </Layout>
   )
 }

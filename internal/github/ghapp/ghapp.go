@@ -9,6 +9,7 @@ import (
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/die-net/lrucache"
 	"github.com/google/go-github/v52/github"
+	"github.com/google/uuid"
 	"github.com/gregjones/httpcache"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -31,6 +32,12 @@ type GHAppClient interface {
 	IsOwnerInstalled(ctx context.Context, owner string) (bool, error)
 	GetInstallation(ctx context.Context, installationID int64) (*github.Installation, error)
 	ListInstalledOwners(ctx context.Context) ([]string, error)
+	CreatePullRequest(
+		ctx context.Context,
+		owner, repo, branchPrefix string,
+		changes map[string]string,
+		title, description string,
+	) (*github.PullRequest, error)
 }
 
 type ghAppClient struct {
@@ -343,4 +350,78 @@ func (c *ghAppClient) ListInstalledOwners(ctx context.Context) ([]string, error)
 	}
 
 	return allInstallations, nil
+}
+
+func (c *ghAppClient) CreatePullRequest(
+	ctx context.Context,
+	owner, repo, branchPrefix string,
+	changes map[string]string,
+	title, description string,
+) (*github.PullRequest, error) {
+	client, err := c.getOwnerInstallationClient(ctx, owner)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to get owner installation client")
+	}
+
+	defaultBranch, err := c.GetDefaultBranch(ctx, owner, repo, owner)
+	if err != nil {
+		return nil, errors.Wrapf(err, "fail to get default branch of repo %s/%s", owner, repo)
+	}
+	defaultBranchInfo, _, err := client.Repositories.GetBranch(ctx, owner, repo, defaultBranch, true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "fail to get branch %s of repo %s/%s", defaultBranch, owner, repo)
+	}
+
+	branch := branchPrefix
+	i := 0
+	for {
+		if i >= 10 {
+			branch = fmt.Sprintf("%s-%s", branchPrefix, uuid.NewString())
+		}
+
+		i += 1
+		_, res, err := client.Repositories.GetBranch(ctx, owner, repo, branch, true)
+		if err == nil {
+			branch = fmt.Sprintf("%s-%d", branchPrefix, i)
+			continue
+		}
+
+		if res != nil && res.StatusCode != http.StatusNotFound {
+			return nil, errors.Wrapf(err, "fail to get branch %s of repo %s/%s", branch, owner, repo)
+		}
+
+		_, _, err = client.Git.CreateRef(ctx, owner, repo, &github.Reference{
+			Ref: github.String(fmt.Sprintf("refs/heads/%s", branch)),
+			Object: &github.GitObject{
+				Type: github.String("commit"),
+				SHA:  defaultBranchInfo.GetCommit().SHA,
+			},
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "fail to create branch %s at repo %s/%s", branch, owner, repo)
+		}
+		break
+	}
+
+	for path, content := range changes {
+		_, _, err := client.Repositories.CreateFile(ctx, owner, repo, path, &github.RepositoryContentFileOptions{
+			Message: github.String(fmt.Sprintf("add %s", path)),
+			Content: []byte(content),
+			Branch:  github.String(branch),
+		})
+
+		if err != nil {
+			return nil, errors.Wrapf(err, "fail to create file %s into branch %s at repo %s/%s", path, branch, owner, repo)
+		}
+	}
+
+	pr, _, err := client.PullRequests.Create(ctx, owner, repo, &github.NewPullRequest{
+		Title:               github.String(title),
+		Head:                github.String(branch),
+		Base:                github.String(defaultBranch),
+		Body:                github.String(description),
+		MaintainerCanModify: github.Bool(true),
+	})
+
+	return pr, errors.Wrapf(err, "fail to create pull request for branch %s at repo %s/%s", branch, owner, repo)
 }

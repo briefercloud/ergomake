@@ -10,7 +10,7 @@ import List from '../components/List'
 import VariablesInput from '../components/VariablesInput'
 import { EnvironmentStatus } from '../hooks/useEnvironment'
 import { useEnvironmentsByRepo } from '../hooks/useEnvironmentsByRepo'
-import { orElse } from '../hooks/useHTTPRequest'
+import { isSuccess, orElse } from '../hooks/useHTTPRequest'
 import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 
@@ -110,13 +110,14 @@ const Environments = ({ profile }: Props) => {
     [owner.login, params.repo]
   )
 
-  const emptyStateComponent = (
-    <EmptyState
-      icon={CubeIcon}
-      title="No environments available"
-      description="Configure a permanent branch or create a pull-request to deploy an environment."
-    />
-  )
+  const emptyStateComponent =
+    isSuccess(envsRes) && !envsRes.refreshing ? (
+      <EmptyState
+        icon={CubeIcon}
+        title="No environments available"
+        description="Configure a permanent branch or create a pull-request to deploy an environment."
+      />
+    ) : null
 
   return (
     <Layout profile={profile} pages={pages}>

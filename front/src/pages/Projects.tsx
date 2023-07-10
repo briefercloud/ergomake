@@ -1,5 +1,5 @@
 import { PlusIcon } from '@heroicons/react/20/solid'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 
 import Layout, { installationUrl } from '../components/Layout'
@@ -27,17 +27,11 @@ const Projects = ({ profile }: Props) => {
   ]
 
   const reposRes = useReposByOwner(params.owner ?? profile.username)
-  const [search, setSearch] = useState('')
-  const [repos, hasProjects] = useMemo(() => {
+  const repos = useMemo(() => {
     const repos = orElse(reposRes, []).filter((r) => r.isInstalled)
 
-    return [
-      repos
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .filter((r) => search === '' || r.name.includes(search)),
-      repos.length > 0,
-    ]
-  }, [reposRes, search])
+    return repos.sort((a, b) => a.name.localeCompare(b.name))
+  }, [reposRes])
 
   return (
     <Layout profile={profile} pages={pages}>

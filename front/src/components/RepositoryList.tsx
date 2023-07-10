@@ -8,6 +8,7 @@ type RepositoryListProps = {
 const RepositoryList = ({ repos }: RepositoryListProps) => {
   const repoItems = repos.map((repo) => {
     const envWord = repo.environmentCount === 1 ? 'environment' : 'environments'
+
     return {
       name: repo.name,
       descriptionLeft: `${repo.environmentCount} ${envWord}`,

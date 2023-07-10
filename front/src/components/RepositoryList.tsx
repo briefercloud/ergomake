@@ -1,5 +1,5 @@
-import { Repo } from '../../hooks/useRepo'
 import List from '../components/List'
+import { Repo } from '../hooks/useRepo'
 
 type RepositoryListProps = {
   repos: Repo[]
@@ -12,7 +12,7 @@ const RepositoryList = ({ repos }: RepositoryListProps) => {
       name: repo.name,
       descriptionLeft: `${repo.environmentCount} ${envWord}`,
       descriptionRight: 'Deploys from GitHub',
-      url: `/v2/gh/${repo.owner}/repos/${repo.name}`,
+      url: `/gh/${repo.owner}/repos/${repo.name}`,
     }
   })
 

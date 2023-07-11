@@ -57,4 +57,5 @@ func (ghr *githubRouter) AddRoutes(router *gin.RouterGroup) {
 	router.POST("/marketplace/webhook", ghr.marketplaceWebhook)
 	router.GET("/user/organizations", ghr.listUserOrganizations)
 	router.GET("/owner/:owner/repos", ghr.listReposForOwner)
+	router.POST("/owner/:owner/repos/:repo/configure", ghr.configureRepo)
 }

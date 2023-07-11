@@ -8,6 +8,7 @@ export type Repo = {
   name: string
   isInstalled: boolean
   environmentCount: number
+  lastDeployedAt: string | null
 }
 export const useRepo = (
   owner: string,

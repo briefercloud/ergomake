@@ -25,8 +25,10 @@ function Loading(props: Props) {
   const className = props.className ?? ''
   return (
     <ArrowPathIcon
-      className={`animate-spin h-${size} w-${size} text-white ${className}`}
+      className={`animate-spin text-white ${className}`}
       fill={color}
+      width={size}
+      height={size}
     />
   )
 }

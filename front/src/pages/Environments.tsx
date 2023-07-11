@@ -90,6 +90,7 @@ const Environments = ({ profile }: Props) => {
           new Date()
         )}`,
         url: `/gh/${owner.login}/repos/${params.repo}/envs/${env.id}`,
+        data: env,
       })),
     [envs, owner.login, params.repo]
   )

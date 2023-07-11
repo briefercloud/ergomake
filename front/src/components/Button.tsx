@@ -6,8 +6,9 @@ interface Props extends React.ButtonHTMLAttributes<unknown> {
   loading?: boolean
 }
 function Button(props: Props) {
-  const className = classNames(
-    props.className,
+  const { loading, className, children, ...buttonProps } = props
+  const cn = classNames(
+    className,
     'rounded-md',
     'px-3',
     'py-2',
@@ -20,18 +21,19 @@ function Button(props: Props) {
     'focus-visible:outline-offset-2',
     'focus-visible:outline-primary-600',
     {
-      'bg-primary-600': !props.disabled,
-      'bg-gray-400': props.disabled,
-      'hover:bg-primary-500': !props.disabled,
-      flex: props.loading,
-      'items-center': props.loading,
+      'bg-primary-600': !buttonProps.disabled,
+      'bg-gray-400': buttonProps.disabled,
+      'hover:bg-primary-500': !buttonProps.disabled,
+      flex: loading,
+      'items-center': loading,
+      'justify-center': loading,
     }
   )
 
   return (
-    <button {...props} className={className}>
-      {props.loading && <Loading className="mr-1" size={4} />}
-      {props.children}
+    <button {...buttonProps} className={cn}>
+      {loading && <Loading className="mr-1" size={12} />}
+      {children}
     </button>
   )
 }

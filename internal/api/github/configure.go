@@ -67,7 +67,7 @@ Here are the most common actions you may need to take:
 
 # Where to go from here
 
-**You can [configure branches to be permanently deployed](PLATFORM LINK)**. That way, you can access that branch at any time, regardless of whether there's a PR with its contents. **Permanent branches are useful for permanent staging, QA, or development environments.**
+In our platform, you can configure branches to be permanently deployed. That way, you can access that branch at any time, regardless of whether there's a PR with its contents. **Permanent branches are useful for permanent staging, QA, or development environments.**
 
 ---
 

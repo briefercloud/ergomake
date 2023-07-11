@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -86,5 +87,6 @@ Here are the most common actions you may need to take:
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"pullRequestURL": pr.GetURL()})
+	url := fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repo, pr.GetNumber())
+	c.JSON(http.StatusOK, gin.H{"pullRequestURL": url})
 }

@@ -7,8 +7,12 @@ type RepositoryListProps = {
   onConfigure: (repo: Repo) => void
 }
 
-const ConfigureButton = () => {
-  return <Button>Configure</Button>
+type ConfigureButtonProps = {
+  onClick: () => void
+}
+
+const ConfigureButton = ({ onClick }: ConfigureButtonProps) => {
+  return <Button onClick={onClick}>Configure</Button>
 }
 
 const RepositoryList = ({ repos, onConfigure }: RepositoryListProps) => {
@@ -19,11 +23,12 @@ const RepositoryList = ({ repos, onConfigure }: RepositoryListProps) => {
       name: repo.name,
       descriptionLeft: `${repo.environmentCount} ${envWord}`,
       descriptionRight: 'Deploys from GitHub',
-      chevron: repo.lastDeployedAt ? undefined : <ConfigureButton />,
+      chevron: repo.lastDeployedAt ? undefined : (
+        <ConfigureButton onClick={() => onConfigure(repo)} />
+      ),
       url: repo.lastDeployedAt
         ? `/gh/${repo.owner}/repos/${repo.name}`
         : undefined,
-      onClick: repo.lastDeployedAt ? undefined : onConfigure,
       data: repo,
     }
   })

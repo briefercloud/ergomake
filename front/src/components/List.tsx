@@ -47,8 +47,9 @@ function Item<T>(props: ListItem<T>) {
   )
 
   const className = classNames(
-    'relative w-full flex items-center space-x-4 py-4 px-8  border-b border-gray-200/70 hover:cursor-not-allowed',
-    { 'hover:bg-gray-100 hover:cursor-pointer': props.url !== undefined }
+    'relative w-full flex items-center space-x-4 py-4 px-8  border-b border-gray-200/70',
+    { 'hover:bg-gray-100 hover:cursor-pointer': props.url !== undefined },
+    { 'hover:cursor-not-allowed': props.url === undefined }
   )
 
   if (props.url) {
@@ -91,4 +92,3 @@ function List<T>({ items, emptyState }: ListProps<T>) {
 }
 
 export default List
-

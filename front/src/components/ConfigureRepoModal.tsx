@@ -1,5 +1,9 @@
 import { Dialog, Transition } from '@headlessui/react'
-import { CheckIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowPathIcon,
+  CheckIcon,
+  FolderPlusIcon,
+} from '@heroicons/react/24/outline'
 import { Fragment, useCallback, useEffect, useState } from 'react'
 
 import { Repo } from '../hooks/useRepo'
@@ -8,19 +12,29 @@ import Button from './Button'
 type State = {
   loading: boolean
   error: Error | null
+  pullRequestURL: null | string
 }
 
 interface Props {
   repo: Repo | null
   onClose: (success: boolean) => void
 }
+
 function ConfigureRepoModal({ repo, onClose }: Props) {
   const [state, setState] = useState<State>({
+    pullRequestURL: null,
     loading: false,
     error: null,
   })
+
   useEffect(() => {
-    setState({ loading: false, error: null })
+    if (repo) {
+      setState({
+        pullRequestURL: null,
+        loading: false,
+        error: null,
+      })
+    }
   }, [repo])
 
   const handleOnConfigure = useCallback(() => {
@@ -29,7 +43,7 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
     }
 
     const url = `${process.env.REACT_APP_ERGOMAKE_API}/v2/github/owner/${repo.owner}/repos/${repo.name}/configure`
-    setState({ loading: true, error: null })
+    setState({ loading: true, error: null, pullRequestURL: null })
 
     fetch(url, {
       method: 'POST',
@@ -38,26 +52,35 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
       },
       credentials: 'include',
     })
-      .then(() => {
-        setState({ loading: false, error: null })
-        onClose(true)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(res.statusText)
+        }
+
+        const response: { pullRequestURL: string } = await res.json()
+
+        setState({
+          pullRequestURL: response.pullRequestURL,
+          loading: false,
+          error: null,
+        })
       })
       .catch((err) => {
-        setState({ loading: false, error: err })
+        setState({ loading: false, error: err, pullRequestURL: null })
       })
-  }, [repo, setState, onClose])
+  }, [repo, setState])
 
   const handleOnClose = useCallback(() => {
     if (state.loading) {
       return
     }
 
-    onClose(false)
+    onClose(state.pullRequestURL !== null)
   }, [state, onClose])
 
   return (
     <Transition.Root show={repo !== null} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={handleOnClose}>
+      <Dialog as="div" className="relative z-50" onClose={handleOnClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -82,41 +105,85 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
-                <div>
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                    <CheckIcon
-                      className="h-6 w-6 text-green-600"
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div className="mt-3 text-center sm:mt-5">
-                    <Dialog.Title
-                      as="h3"
-                      className="text-base font-semibold leading-6 text-gray-900"
-                    >
-                      YOU LIKE BICYCLING?
-                    </Dialog.Title>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        The trail is somewhat wide for singletrack and a bit
-                        technical with roots and rocks. Have fun and hang on
-                        tight! Amazing views of Castle valley are afforded after
-                        50 meters of riding. It is steep. It is not hard to get
-                        to and is very fun to ride.
-                      </p>
+                {!state.loading && (
+                  <div>
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                      {state.pullRequestURL === null ? (
+                        <FolderPlusIcon
+                          className="h-6 w-6 text-green-600"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <CheckIcon
+                          className="h-6 w-6 text-green-600"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    <div className="mt-3 text-center sm:mt-5">
+                      <Dialog.Title
+                        as="h3"
+                        className="text-base font-semibold leading-6 text-gray-900"
+                      >
+                        {!state.pullRequestURL
+                          ? 'Automatic configuration'
+                          : 'Pull request ready'}
+                      </Dialog.Title>
+                      <div className="mt-2">
+                        {!state.pullRequestURL ? (
+                          <p className="text-sm text-gray-500">
+                            Ergomake will automatically create a pull request
+                            with all the necessary configurations to deploy new
+                            environments.
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-500">
+                              Your pull request is ready. Here is a link to view
+                              it:
+                            </p>
+                            <p className="pt-2">
+                              <a
+                                href={state.pullRequestURL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary-500"
+                              >
+                                {state.pullRequestURL}
+                              </a>
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-5 sm:mt-6">
-                  <Button
-                    disabled={state.loading}
-                    loading={state.loading}
-                    className="w-full"
-                    onClick={handleOnConfigure}
-                  >
-                    BIKE!
-                  </Button>
-                </div>
+                )}
+                {state.loading && (
+                  <div>
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                      <ArrowPathIcon
+                        className="h-6 w-6 text-green-600 animate-spin"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <div className="mt-3 text-center sm:mt-5">
+                      <Dialog.Title
+                        as="h3"
+                        className="text-base font-semibold leading-6 text-gray-900"
+                      >
+                        Creating pull request...
+                      </Dialog.Title>
+                    </div>
+                  </div>
+                )}
+
+                {!state.loading && !state.pullRequestURL && (
+                  <div className="mt-5 sm:mt-6">
+                    <Button className="w-full" onClick={handleOnConfigure}>
+                      Configure
+                    </Button>
+                  </div>
+                )}
               </Dialog.Panel>
             </Transition.Child>
           </div>

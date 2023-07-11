@@ -17,8 +17,8 @@ interface Props {
 
 const Projects = ({ profile }: Props) => {
   const [configuring, setConfiguring] = useState<Repo | null>(null)
+  const [configured, setConfigured] = useState<Set<string>>(new Set())
   const ownersRes = useOwners()
-  const navigate = useNavigate()
   const params = useParams<{ owner: string }>()
 
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
@@ -34,18 +34,25 @@ const Projects = ({ profile }: Props) => {
   const repos = useMemo(() => {
     const repos = orElse(reposRes, []).filter((r) => r.isInstalled)
 
-    return repos.sort((a, b) => a.name.localeCompare(b.name))
-  }, [reposRes])
+    return repos
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((r) => ({
+        ...r,
+        lastDeployedAt:
+          r.lastDeployedAt ??
+          (configured.has(r.name) ? new Date().toISOString() : null),
+      }))
+  }, [reposRes, configured])
 
   const onCloseConfiguring = useCallback(
     (success: boolean) => {
-      if (success && configuring) {
-        navigate(`/gh/${owner}/repos/${configuring.name}`)
+      if (configuring && success) {
+        const repo = configuring.name
+        setConfigured((c) => new Set([...Array.from(c), repo]))
       }
-
       setConfiguring(null)
     },
-    [configuring, navigate, owner, setConfiguring]
+    [configuring, setConfiguring, setConfigured]
   )
 
   return (

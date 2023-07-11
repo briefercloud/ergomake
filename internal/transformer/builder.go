@@ -331,11 +331,8 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 		fmt.Sprintf("--context-sub-path=%s", buildPath),
 		"--destination=" + service.Image,
 		"--use-new-run",
-		"--compressed-caching=false",
 		"--cleanup",
 		"--snapshot-mode=redo",
-		"--cache",
-		fmt.Sprintf("--cache-repo=%s", userlandRegistry),
 	}, buildArgs...)
 
 	if insecureRegistry != "" {

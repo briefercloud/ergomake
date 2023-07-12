@@ -8,6 +8,7 @@ import (
 	"github.com/ergomake/ergomake/internal/api/auth"
 	environmentsApi "github.com/ergomake/ergomake/internal/api/environments"
 	"github.com/ergomake/ergomake/internal/api/github"
+	permanentbranchesApi "github.com/ergomake/ergomake/internal/api/permanentbranches"
 	"github.com/ergomake/ergomake/internal/api/registries"
 	"github.com/ergomake/ergomake/internal/api/stripe"
 	"github.com/ergomake/ergomake/internal/api/variables"
@@ -16,8 +17,10 @@ import (
 	"github.com/ergomake/ergomake/internal/environments"
 	"github.com/ergomake/ergomake/internal/envvars"
 	"github.com/ergomake/ergomake/internal/github/ghapp"
+	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/payment"
+	"github.com/ergomake/ergomake/internal/permanentbranches"
 	"github.com/ergomake/ergomake/internal/privregistry"
 	"github.com/ergomake/ergomake/internal/servicelogs"
 	"github.com/ergomake/ergomake/internal/users"
@@ -81,6 +84,7 @@ func NewServer(
 	environmentsProvider environments.EnvironmentsProvider,
 	usersService users.Service,
 	paymentProvider payment.PaymentProvider,
+	permanentBranchesProvider permanentbranches.PermanentBranchesProvider,
 	cfg *Config,
 ) *server {
 	router := gin.New()
@@ -97,7 +101,19 @@ func NewServer(
 	})
 
 	privRegistryProvider := privregistry.NewDBPrivRegistryProvider(db, cfg.PrivRegistriesSecret)
+
+	ghLauncher := ghlauncher.NewGHLauncher(
+		db,
+		ghApp,
+		clusterClient,
+		envVarsProvider,
+		privRegistryProvider,
+		environmentsProvider,
+		cfg.DockerhubPullSecretName,
+		cfg.FrontendURL,
+	)
 	ghRouter := github.NewGithubRouter(
+		ghLauncher,
 		db,
 		ghApp,
 		clusterClient,
@@ -137,6 +153,14 @@ func NewServer(
 
 	variablesRouter := variables.NewVariablesRouter(envVarsProvider)
 	variablesRouter.AddRoutes(v2)
+
+	permanentbranchesRouter := permanentbranchesApi.NewPermanentBranchesRouter(
+		ghApp,
+		ghLauncher,
+		permanentBranchesProvider,
+		environmentsProvider,
+	)
+	permanentbranchesRouter.AddRoutes(v2)
 
 	return &server{router}
 }

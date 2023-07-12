@@ -11,7 +11,9 @@ import (
 	"github.com/ergomake/ergomake/e2e/testutils"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/payment"
+	clusterMocks "github.com/ergomake/ergomake/mocks/cluster"
 	paymentMocks "github.com/ergomake/ergomake/mocks/payment"
+	permanentbranchesMocks "github.com/ergomake/ergomake/mocks/permanentbranches"
 )
 
 func TestDBEnvironmentsProvider_IsOwnerLimited(t *testing.T) {
@@ -95,7 +97,13 @@ func TestDBEnvironmentsProvider_IsOwnerLimited(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			ep := NewDBEnvironmentsProvider(db, paymentProvider, tc.limit)
+			ep := NewDBEnvironmentsProvider(
+				db,
+				paymentProvider,
+				tc.limit,
+				permanentbranchesMocks.NewPermanentBranchesProvider(t),
+				clusterMocks.NewClient(t),
+			)
 			limited, err := ep.IsOwnerLimited(context.Background(), "owner")
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, limited)

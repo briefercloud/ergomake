@@ -233,6 +233,63 @@ func (_c *GHAppClient_DoesBranchExist_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// GetBranch provides a mock function with given fields: ctx, owner, repo, branch
+func (_m *GHAppClient) GetBranch(ctx context.Context, owner string, repo string, branch string) (*github.Branch, error) {
+	ret := _m.Called(ctx, owner, repo, branch)
+
+	var r0 *github.Branch
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (*github.Branch, error)); ok {
+		return rf(ctx, owner, repo, branch)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) *github.Branch); ok {
+		r0 = rf(ctx, owner, repo, branch)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*github.Branch)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, owner, repo, branch)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GHAppClient_GetBranch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBranch'
+type GHAppClient_GetBranch_Call struct {
+	*mock.Call
+}
+
+// GetBranch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+//   - repo string
+//   - branch string
+func (_e *GHAppClient_Expecter) GetBranch(ctx interface{}, owner interface{}, repo interface{}, branch interface{}) *GHAppClient_GetBranch_Call {
+	return &GHAppClient_GetBranch_Call{Call: _e.mock.On("GetBranch", ctx, owner, repo, branch)}
+}
+
+func (_c *GHAppClient_GetBranch_Call) Run(run func(ctx context.Context, owner string, repo string, branch string)) *GHAppClient_GetBranch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *GHAppClient_GetBranch_Call) Return(_a0 *github.Branch, _a1 error) *GHAppClient_GetBranch_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *GHAppClient_GetBranch_Call) RunAndReturn(run func(context.Context, string, string, string) (*github.Branch, error)) *GHAppClient_GetBranch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCloneParams provides a mock function with given fields:
 func (_m *GHAppClient) GetCloneParams() []string {
 	ret := _m.Called()

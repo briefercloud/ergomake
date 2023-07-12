@@ -19,6 +19,7 @@ import (
 	"github.com/ergomake/ergomake/internal/github/ghapp"
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/payment"
+	"github.com/ergomake/ergomake/internal/permanentbranches"
 	"github.com/ergomake/ergomake/internal/servicelogs"
 	"github.com/ergomake/ergomake/internal/stale"
 	"github.com/ergomake/ergomake/internal/users"
@@ -64,7 +65,15 @@ func main() {
 	paymentProvider := payment.NewStripePaymentProvider(db, cfg.StripeSecretKey, cfg.StripeStandardPlanProductID,
 		cfg.StripeProfessionalPlanProductID, cfg.Friends, cfg.BestFriends)
 
-	environmentsProvider := environments.NewDBEnvironmentsProvider(db, paymentProvider, cfg.EnvironmentsLimit)
+	permanentBranchesProvider := permanentbranches.NewDBEnvironmentsProvider(db)
+
+	environmentsProvider := environments.NewDBEnvironmentsProvider(
+		db,
+		paymentProvider,
+		cfg.EnvironmentsLimit,
+		permanentBranchesProvider,
+		clusterClient,
+	)
 
 	usersService := users.NewDBUsersService(db)
 
@@ -73,8 +82,18 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		api := api.NewServer(db, logStreamer, ghApp, clusterClient, envVarsProvider,
-			environmentsProvider, usersService, paymentProvider, &cfg)
+		api := api.NewServer(
+			db,
+			logStreamer,
+			ghApp,
+			clusterClient,
+			envVarsProvider,
+			environmentsProvider,
+			usersService,
+			paymentProvider,
+			permanentBranchesProvider,
+			&cfg,
+		)
 		api.Listen(":8080")
 	}()
 

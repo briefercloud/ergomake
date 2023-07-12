@@ -85,8 +85,18 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 	repos := []gin.H{}
 	for _, repo := range repositories {
 		environmentCount := envsCountByRepo[repo.GetName()]
-
 		lastDeployedAt := lastDeployedAtByRepo[repo.GetName()]
+		if err != nil {
+			logger.Ctx(c).Log().Stack().Err(err).
+				Str("owner", owner).
+				Str("repo", repo.GetName()).
+				Msg("fail to get repo permanent branches")
+			c.JSON(
+				http.StatusInternalServerError,
+				http.StatusText(http.StatusInternalServerError),
+			)
+			return
+		}
 
 		repos = append(repos, gin.H{
 			"owner":            owner,

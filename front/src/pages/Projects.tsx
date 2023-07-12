@@ -1,6 +1,6 @@
 import { PlusIcon } from '@heroicons/react/20/solid'
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import ConfigureRepoModal from '../components/ConfigureRepoModal'
 import Layout, { installationUrl } from '../components/Layout'

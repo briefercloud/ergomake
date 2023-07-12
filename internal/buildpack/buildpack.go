@@ -13,10 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/ergomake/ergomake/internal/api/github"
 	"github.com/ergomake/ergomake/internal/cluster"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/github/ghapp"
+	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/transformer"
 )
@@ -167,7 +167,7 @@ func WatchBuilds(
 						if err != nil {
 							logger.Get().Err(err).Str("env", env.ID.String()).Str("service", service.Name).
 								Msg("fail to scale deployment up when bringing environment up")
-							github.FailRun(ctx, ghApp, db, envFrontendLink, &env, sha, nil)
+							ghlauncher.FailRun(ctx, ghApp, db, envFrontendLink, &env, sha, nil)
 							continue outer
 						}
 					}
@@ -175,10 +175,10 @@ func WatchBuilds(
 					err := db.Model(&env).Update("status", database.EnvSuccess).Error
 					if err != nil {
 						logger.Ctx(ctx).Err(err).Str("env", env.ID.String()).Msg("fail to update db environment status to success")
-						github.FailRun(ctx, ghApp, db, envFrontendLink, &env, sha, nil)
+						ghlauncher.FailRun(ctx, ghApp, db, envFrontendLink, &env, sha, nil)
 						continue outer
 					}
-					github.SuccessRun(ctx, ghApp, db, envFrontendLink, transformer.EnvironmentFromDB(&env), &env, sha)
+					ghlauncher.SuccessRun(ctx, ghApp, db, envFrontendLink, transformer.EnvironmentFromDB(&env), &env, sha)
 				} else {
 					err := db.Model(&env).Update("status", database.EnvDegraded).Error
 					if err != nil {
@@ -191,7 +191,7 @@ func WatchBuilds(
 						continue outer
 					}
 
-					github.FailRun(ctx, ghApp, db, envFrontendLink, &env, sha, nil)
+					ghlauncher.FailRun(ctx, ghApp, db, envFrontendLink, &env, sha, nil)
 				}
 
 				logger.Ctx(ctx).Info().Str("env", env.ID.String()).Bool("success", success).

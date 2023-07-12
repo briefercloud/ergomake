@@ -18,6 +18,7 @@ import (
 	envvarsMocks "github.com/ergomake/ergomake/mocks/envvars"
 	ghAppMocks "github.com/ergomake/ergomake/mocks/github/ghapp"
 	paymentMocks "github.com/ergomake/ergomake/mocks/payment"
+	permanentbranchesMocks "github.com/ergomake/ergomake/mocks/permanentbranches"
 	servicelogsMocks "github.com/ergomake/ergomake/mocks/servicelogs"
 	usersMocks "github.com/ergomake/ergomake/mocks/users"
 )
@@ -108,8 +109,18 @@ func TestMarketplaceWebhook(t *testing.T) {
 			db := testutils.CreateRandomDB(t)
 
 			ghApp := ghAppMocks.NewGHAppClient(t)
-			apiServer := api.NewServer(db, servicelogsMocks.NewLogStreamer(t), ghApp, clusterClient, envvarsMocks.NewEnvVarsProvider(t),
-				environmentsMocks.NewEnvironmentsProvider(t), usersMocks.NewService(t), paymentMocks.NewPaymentProvider(t), cfg)
+			apiServer := api.NewServer(
+				db,
+				servicelogsMocks.NewLogStreamer(t),
+				ghApp,
+				clusterClient,
+				envvarsMocks.NewEnvVarsProvider(t),
+				environmentsMocks.NewEnvironmentsProvider(t),
+				usersMocks.NewService(t),
+				paymentMocks.NewPaymentProvider(t),
+				permanentbranchesMocks.NewPermanentBranchesProvider(t),
+				cfg,
+			)
 
 			server := httptest.NewServer(apiServer)
 			e := httpexpect.Default(t, server.URL)

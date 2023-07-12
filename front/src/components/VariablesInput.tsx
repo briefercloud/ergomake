@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
+import TableInput from '../components/TableInput'
 import { isLoading, isSuccess } from '../hooks/useHTTPRequest'
 import { Variable, useVariables } from '../hooks/useVariables'
-import TableInput from '../components/TableInput'
 
 const labels = ['Name', 'Value']
 const placeholders = ['EXAMPLE_VAR', 'value123']
@@ -63,6 +63,7 @@ function VariablesInput(props: Props) {
       onAdd={onAdd}
       onRemove={onRemove}
       onSave={onSave}
+      saveLabel="Save to apply environment variables."
     />
   )
 }

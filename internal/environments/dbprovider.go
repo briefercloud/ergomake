@@ -74,7 +74,7 @@ func (ep *dbEnvironmentsProvider) IsOwnerLimited(ctx context.Context, owner stri
 	}
 	currentEnvCount := 0
 	for _, env := range ownerEnvs {
-		if env.Status == database.EnvLimited {
+		if env.Status == database.EnvLimited || env.Status == database.EnvDegraded {
 			continue
 		}
 		currentEnvCount += 1

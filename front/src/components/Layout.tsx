@@ -331,7 +331,7 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
           closeSidebar={() => setSidebarOpen(false)}
         />
 
-        <div className="lg:pl-72 h-screen flex flex-col overflow-hidden">
+        <div className="lg:pl-72 h-full flex flex-col overflow-hidden">
           <TopNavbar
             pages={pages}
             profile={profile}

@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/envvars"
 
 	kpackBuild "github.com/pivotal/kpack/pkg/apis/build/v1alpha2"
@@ -62,6 +63,12 @@ func (c *gitCompose) buildImages(
 	ctx context.Context,
 	namespace string,
 ) (*BuildImagesResult, error) {
+	c.dbEnvironment.Status = database.EnvBuilding
+	err := c.db.Save(c.dbEnvironment).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to set env status to building")
+	}
+
 	if c.isCompose {
 		return c.buildImagesWithKaniko(ctx, namespace)
 	} else {

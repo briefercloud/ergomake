@@ -2,6 +2,7 @@ package permanentbranches
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/ergomake/ergomake/internal/api/auth"
 	"github.com/ergomake/ergomake/internal/environments"
+	"github.com/ergomake/ergomake/internal/github/ghapp"
 	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/github/ghoauth"
 	"github.com/ergomake/ergomake/internal/logger"
@@ -26,8 +28,8 @@ func (pbr *permanentBranchesRouter) upsert(c *gin.Context) {
 	}
 
 	owner := c.Param("owner")
-	repo := c.Param("repo")
-	if owner == "" || repo == "" {
+	repoStr := c.Param("repo")
+	if owner == "" || repoStr == "" {
 		c.JSON(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		return
 	}
@@ -62,9 +64,9 @@ func (pbr *permanentBranchesRouter) upsert(c *gin.Context) {
 		return
 	}
 
-	branches, err := pbr.permanentbranchesProvider.BatchUpsert(c, owner, repo, body.Branches)
+	branches, err := pbr.permanentbranchesProvider.BatchUpsert(c, owner, repoStr, body.Branches)
 	if err != nil {
-		logger.Ctx(c).Err(err).Msgf("fail to upsert permanent branches for repo %s/%s", owner, repo)
+		logger.Ctx(c).Err(err).Msgf("fail to upsert permanent branches for repo %s/%s", owner, repoStr)
 		c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 		return
 	}
@@ -72,7 +74,7 @@ func (pbr *permanentBranchesRouter) upsert(c *gin.Context) {
 	go func() {
 		logCtx := logger.With(logger.Get()).
 			Str("owner", owner).
-			Str("repo", repo).
+			Str("repo", repoStr).
 			Logger()
 		log := &logCtx
 		ctx := log.WithContext(context.Background())
@@ -85,14 +87,14 @@ func (pbr *permanentBranchesRouter) upsert(c *gin.Context) {
 
 				req := environments.TerminateEnvironmentRequest{
 					Owner:    owner,
-					Repo:     repo,
+					Repo:     repoStr,
 					Branch:   branch,
 					PrNumber: nil,
 				}
 				err := pbr.environmentsProvider.TerminateEnvironment(ctx, req)
 				if err != nil {
 					log.Err(err).Str("branch", branch).
-						Msg("fial to terminate environment after branch was removed from permanent branches")
+						Msg("fail to terminate environment after branch was removed from permanent branches")
 				}
 			}(removed)
 		}
@@ -101,25 +103,42 @@ func (pbr *permanentBranchesRouter) upsert(c *gin.Context) {
 			wg.Add(1)
 			go func(branchStr string) {
 				defer wg.Done()
-				sha := ""
-				author := user.GetLogin()
-				branch, err := pbr.ghApp.GetBranch(ctx, owner, repo, branchStr)
+				sha, err := pbr.ghApp.GetBranchSHA(ctx, owner, repoStr, branchStr)
 				if err != nil {
-					log.Warn().AnErr("error", err).Str("branch", branchStr).
-						Msg("fail to get branch while laucnhing environment after permanent branch was added")
-				} else {
-					author = branch.GetCommit().GetAuthor().GetLogin()
-					sha = branch.GetCommit().GetSHA()
+					if errors.Is(err, ghapp.BranchNotFoundError) {
+						return
+					}
+
+					logger.Ctx(ctx).Err(err).
+						Str("owner", owner).
+						Str("repo", repoStr).
+						Str("branch", branchStr).
+						Msg("fail to get branch sha")
+					return
+				}
+
+				isPrivate, err := pbr.ghApp.IsRepoPrivate(ctx, owner, repoStr)
+				if err != nil {
+					if errors.Is(err, ghapp.RepoNotFoundError) {
+						return
+					}
+
+					logger.Ctx(ctx).Err(err).
+						Str("owner", owner).
+						Str("repo", repoStr).
+						Str("branch", branchStr).
+						Msg("fail to check if repo is private")
+					return
 				}
 
 				req := ghlauncher.LaunchEnvironmentRequest{
 					Owner:       owner,
 					BranchOwner: owner,
-					Repo:        repo,
+					Repo:        repoStr,
 					Branch:      branchStr,
 					SHA:         sha,
-					Author:      author,
-					IsPrivate:   true,
+					Author:      user.GetLogin(),
+					IsPrivate:   isPrivate,
 				}
 				err = pbr.ghLaunccher.LaunchEnvironment(ctx, req)
 				if err != nil {

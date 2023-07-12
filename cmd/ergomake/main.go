@@ -17,12 +17,15 @@ import (
 	"github.com/ergomake/ergomake/internal/environments"
 	"github.com/ergomake/ergomake/internal/envvars"
 	"github.com/ergomake/ergomake/internal/github/ghapp"
+	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/payment"
 	"github.com/ergomake/ergomake/internal/permanentbranches"
+	"github.com/ergomake/ergomake/internal/privregistry"
 	"github.com/ergomake/ergomake/internal/servicelogs"
 	"github.com/ergomake/ergomake/internal/stale"
 	"github.com/ergomake/ergomake/internal/users"
+	"github.com/ergomake/ergomake/internal/watcher"
 
 	kpackBuild "github.com/pivotal/kpack/pkg/apis/build/v1alpha2"
 )
@@ -76,6 +79,18 @@ func main() {
 	)
 
 	usersService := users.NewDBUsersService(db)
+	privRegistryProvider := privregistry.NewDBPrivRegistryProvider(db, cfg.PrivRegistriesSecret)
+
+	ghLauncher := ghlauncher.NewGHLauncher(
+		db,
+		ghApp,
+		clusterClient,
+		envVarsProvider,
+		privRegistryProvider,
+		environmentsProvider,
+		cfg.DockerhubPullSecretName,
+		cfg.FrontendURL,
+	)
 
 	var wg sync.WaitGroup
 
@@ -83,6 +98,8 @@ func main() {
 	go func() {
 		defer wg.Done()
 		api := api.NewServer(
+			ghLauncher,
+			privRegistryProvider,
 			db,
 			logStreamer,
 			ghApp,
@@ -131,6 +148,9 @@ func main() {
 
 		innerWg.Wait()
 	}()
+
+	stopWatcher := watcher.WatchEnvironments(context.Background(), db, environmentsProvider, ghApp, ghLauncher)
+	defer stopWatcher()
 
 	clean, err := buildpack.WatchBuilds(clusterClient, db, ghApp, cfg.FrontendURL)
 	if err != nil {

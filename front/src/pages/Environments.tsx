@@ -19,7 +19,7 @@ interface Props {
   profile: Profile
 }
 
-const EnvironmentStatusStyle: Record<EnvironmentStatus, string> = {
+export const EnvironmentStatusStyle: Record<EnvironmentStatus, string> = {
   pending: 'text-rose-400 bg-rose-400/30',
   building: 'text-blue-400 bg-blue-400/30',
   success: 'text-green-400 bg-blue-400/20',
@@ -78,8 +78,14 @@ const Environments = ({ profile }: Props) => {
     params.repo ?? ''
   )
   useEffect(() => {
-    if (currentTab === 'branches') {
-      refetchEnvs()
+    if (currentTab !== 'branches') {
+      return
+    }
+
+    refetchEnvs()
+    const interval = setInterval(refetchEnvs, 5000)
+    return () => {
+      clearInterval(interval)
     }
   }, [currentTab, refetchEnvs])
   const envs = useMemo(

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useEnvironmentsByRepo } from './useEnvironmentsByRepo'
-import { HTTPResponse, map } from './useHTTPRequest'
+import { UseHTTPRequest, map } from './useHTTPRequest'
 
 export type EnvironmentStatus =
   | 'pending'
@@ -59,11 +59,11 @@ export const useEnvironment = (
   owner: string,
   repo: string,
   id: string
-): HTTPResponse<Environment | null> => {
-  const [envs] = useEnvironmentsByRepo(owner, repo)
+): UseHTTPRequest<Environment | null> => {
+  const [envs, refetch] = useEnvironmentsByRepo(owner, repo)
 
   return useMemo(
-    () => map(envs, (envs) => envs.find((e) => e.id === id) ?? null),
-    [envs, id]
+    () => [map(envs, (envs) => envs.find((e) => e.id === id) ?? null), refetch],
+    [envs, refetch, id]
   )
 }

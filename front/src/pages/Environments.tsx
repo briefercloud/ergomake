@@ -1,12 +1,13 @@
 import { CubeIcon } from '@heroicons/react/24/outline'
 import classNames from 'classnames'
 import * as dfns from 'date-fns'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import EmptyState from '../components/EmptyState'
 import Layout from '../components/Layout'
 import List from '../components/List'
+import PermanentBranchesInput from '../components/PermanentBranchesInput'
 import VariablesInput from '../components/VariablesInput'
 import { EnvironmentStatus } from '../hooks/useEnvironment'
 import { useEnvironmentsByRepo } from '../hooks/useEnvironmentsByRepo'
@@ -36,11 +37,12 @@ const EnvironmentStatusText: Record<EnvironmentStatus, string> = {
   stale: 'Sleeping',
 }
 
-type TabName = 'branches' | 'envVars'
+type TabName = 'branches' | 'envVars' | 'permanentBranches'
 
 const secondaryNavigation: Array<{ name: string; tabName: TabName }> = [
   { name: 'Branches', tabName: 'branches' },
   { name: 'Environment Variables', tabName: 'envVars' },
+  { name: 'Permanent Branches', tabName: 'permanentBranches' },
 ]
 
 const StatusBall = ({ status }: { status: EnvironmentStatus }) => {
@@ -70,7 +72,16 @@ const Environments = ({ profile }: Props) => {
       },
     [ownersRes, params.owner]
   )
-  const envsRes = useEnvironmentsByRepo(owner.login, params.repo ?? '')
+
+  const [envsRes, refetchEnvs] = useEnvironmentsByRepo(
+    owner.login,
+    params.repo ?? ''
+  )
+  useEffect(() => {
+    if (currentTab === 'branches') {
+      refetchEnvs()
+    }
+  }, [currentTab, refetchEnvs])
   const envs = useMemo(
     () =>
       orElse(envsRes, []).sort((a, b) =>
@@ -157,6 +168,10 @@ const Environments = ({ profile }: Props) => {
 
       {currentTab === 'envVars' && (
         <VariablesInput owner={owner.login} repo={params.repo ?? ''} />
+      )}
+
+      {currentTab === 'permanentBranches' && (
+        <PermanentBranchesInput owner={owner.login} repo={params.repo ?? ''} />
       )}
     </Layout>
   )

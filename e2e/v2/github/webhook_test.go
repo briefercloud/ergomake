@@ -27,6 +27,7 @@ import (
 	environmentsMocks "github.com/ergomake/ergomake/mocks/environments"
 	envvarsMocks "github.com/ergomake/ergomake/mocks/envvars"
 	paymentMocks "github.com/ergomake/ergomake/mocks/payment"
+	permanentbranchesMocks "github.com/ergomake/ergomake/mocks/permanentbranches"
 	servicelogsMocks "github.com/ergomake/ergomake/mocks/servicelogs"
 	usersMocks "github.com/ergomake/ergomake/mocks/users"
 )
@@ -545,7 +546,8 @@ func TestV2GithubWebhook(t *testing.T) {
 			require.NoError(t, err)
 			apiServer := api.NewServer(db, servicelogsMocks.NewLogStreamer(t), ghApp, clusterClient,
 				envvarsMocks.NewEnvVarsProvider(t), environmentsMocks.NewEnvironmentsProvider(t),
-				usersMocks.NewService(t), paymentMocks.NewPaymentProvider(t), &cfg)
+				usersMocks.NewService(t), paymentMocks.NewPaymentProvider(t), permanentbranchesMocks.NewPermanentBranchesProvider(t),
+				&cfg)
 
 			server := httptest.NewServer(apiServer)
 

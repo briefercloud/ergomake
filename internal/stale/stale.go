@@ -275,6 +275,17 @@ func (s *server) MonitorStaleServices(ctx context.Context) {
 			}
 
 			sort.SliceStable(envs, func(x, y int) bool {
+				isXBranch := !envs[x].PullRequest.Valid
+				isYBranch := !envs[y].PullRequest.Valid
+
+				if isYBranch {
+					return true
+				}
+
+				if isXBranch {
+					return false
+				}
+
 				xLastUsedAt, ok := lastRequestAtByEnvironments[envs[x].ID.String()]
 				if !ok {
 					xLastUsedAt = envs[x].UpdatedAt

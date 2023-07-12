@@ -6,6 +6,7 @@ import (
 	context "context"
 
 	database "github.com/ergomake/ergomake/internal/database"
+	environments "github.com/ergomake/ergomake/internal/environments"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -381,6 +382,49 @@ func (_c *EnvironmentsProvider_ShouldDeploy_Call) Return(_a0 bool, _a1 error) *E
 }
 
 func (_c *EnvironmentsProvider_ShouldDeploy_Call) RunAndReturn(run func(context.Context, string, string, string) (bool, error)) *EnvironmentsProvider_ShouldDeploy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TerminateEnvironment provides a mock function with given fields: ctx, req
+func (_m *EnvironmentsProvider) TerminateEnvironment(ctx context.Context, req environments.TerminateEnvironmentRequest) error {
+	ret := _m.Called(ctx, req)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, environments.TerminateEnvironmentRequest) error); ok {
+		r0 = rf(ctx, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// EnvironmentsProvider_TerminateEnvironment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TerminateEnvironment'
+type EnvironmentsProvider_TerminateEnvironment_Call struct {
+	*mock.Call
+}
+
+// TerminateEnvironment is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req environments.TerminateEnvironmentRequest
+func (_e *EnvironmentsProvider_Expecter) TerminateEnvironment(ctx interface{}, req interface{}) *EnvironmentsProvider_TerminateEnvironment_Call {
+	return &EnvironmentsProvider_TerminateEnvironment_Call{Call: _e.mock.On("TerminateEnvironment", ctx, req)}
+}
+
+func (_c *EnvironmentsProvider_TerminateEnvironment_Call) Run(run func(ctx context.Context, req environments.TerminateEnvironmentRequest)) *EnvironmentsProvider_TerminateEnvironment_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(environments.TerminateEnvironmentRequest))
+	})
+	return _c
+}
+
+func (_c *EnvironmentsProvider_TerminateEnvironment_Call) Return(_a0 error) *EnvironmentsProvider_TerminateEnvironment_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *EnvironmentsProvider_TerminateEnvironment_Call) RunAndReturn(run func(context.Context, environments.TerminateEnvironmentRequest) error) *EnvironmentsProvider_TerminateEnvironment_Call {
 	_c.Call.Return(run)
 	return _c
 }

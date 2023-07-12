@@ -4,12 +4,16 @@ import (
 	"context"
 	"time"
 
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"github.com/ergomake/ergomake/internal/cluster"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/payment"
+	"github.com/ergomake/ergomake/internal/permanentbranches"
 )
 
 type environmentLimits struct {
@@ -21,28 +25,22 @@ type environmentLimits struct {
 	EnvLimit  int
 }
 
-type deployedBranch struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
-	Owner     string         `gorm:"index"`
-	Repo      string         `gorm:"index"`
-	Branch    string         `gorm:"index"`
-}
-
 type dbEnvironmentsProvider struct {
-	db              *database.DB
-	paymentProvider payment.PaymentProvider
-	envLimitAmount  int
+	db                        *database.DB
+	paymentProvider           payment.PaymentProvider
+	envLimitAmount            int
+	permanentBranchesProvider permanentbranches.PermanentBranchesProvider
+	clusterClient             cluster.Client
 }
 
 func NewDBEnvironmentsProvider(
 	db *database.DB,
 	paymentProvider payment.PaymentProvider,
 	envLimitAmount int,
+	permanentBranchesProvider permanentbranches.PermanentBranchesProvider,
+	clusterClient cluster.Client,
 ) *dbEnvironmentsProvider {
-	return &dbEnvironmentsProvider{db, paymentProvider, envLimitAmount}
+	return &dbEnvironmentsProvider{db, paymentProvider, envLimitAmount, permanentBranchesProvider, clusterClient}
 }
 
 func (ep *dbEnvironmentsProvider) IsOwnerLimited(ctx context.Context, owner string) (bool, error) {
@@ -125,34 +123,9 @@ func (ep *dbEnvironmentsProvider) ListSuccessEnvironments(ctx context.Context) (
 }
 
 func (ep *dbEnvironmentsProvider) ShouldDeploy(ctx context.Context, owner string, repo string, branch string) (bool, error) {
-	plan, err := ep.paymentProvider.GetOwnerPlan(ctx, owner)
-	if err != nil {
-		return false, errors.Wrapf(err, "fail to get owner %s plan ", owner)
-	}
+	isPermanentBranch, err := ep.permanentBranchesProvider.IsPermanentBranch(ctx, owner, repo, branch)
 
-	if plan == payment.PaymentPlanFree {
-		return false, nil
-	}
-
-	var deployedBranch deployedBranch
-	err = ep.db.Table("deployed_branches").First(
-		&deployedBranch,
-		map[string]string{
-			"owner":  owner,
-			"repo":   repo,
-			"branch": branch,
-		},
-	).Error
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	return true, nil
+	return isPermanentBranch, errors.Wrapf(err, "fail to check if branch %s is configured as permanent for repo %s/%s", branch, owner, repo)
 }
 
 func (ep *dbEnvironmentsProvider) ListEnvironmentsByBranch(
@@ -182,4 +155,36 @@ func (ep *dbEnvironmentsProvider) ListEnvironmentsByBranch(
 
 func (ep *dbEnvironmentsProvider) DeleteEnvironment(ctx context.Context, id uuid.UUID) error {
 	return ep.db.Table("environments").Delete(&database.Environment{ID: id}).Error
+}
+
+func (ep *dbEnvironmentsProvider) TerminateEnvironment(ctx context.Context, req TerminateEnvironmentRequest) error {
+	branchEnvs, err := ep.ListEnvironmentsByBranch(ctx, req.Owner, req.Repo, req.Branch)
+	if err != nil {
+		return errors.Wrap(err, "fail to list environments by branch")
+	}
+
+	envs := make([]*database.Environment, 0)
+	for _, env := range branchEnvs {
+		if req.PrNumber != nil {
+			if env.PullRequest.Valid && env.PullRequest.Int32 == int32(*req.PrNumber) {
+				envs = append(envs, env)
+			}
+		} else {
+			envs = append(envs, env)
+		}
+	}
+
+	for _, env := range envs {
+		err = ep.clusterClient.DeleteNamespace(ctx, env.ID.String())
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return errors.Wrap(err, "fail to delete namespace")
+		}
+
+		err = ep.DeleteEnvironment(ctx, env.ID)
+		if err != nil {
+			return errors.Wrap(err, "fail to delete environment in DB")
+		}
+	}
+
+	return nil
 }

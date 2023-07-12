@@ -38,6 +38,7 @@ type GHAppClient interface {
 		changes map[string]string,
 		title, description string,
 	) (*github.PullRequest, error)
+	GetBranch(ctx context.Context, owner, repo, branch string) (*github.Branch, error)
 }
 
 type ghAppClient struct {
@@ -424,4 +425,21 @@ func (c *ghAppClient) CreatePullRequest(
 	})
 
 	return pr, errors.Wrapf(err, "fail to create pull request for branch %s at repo %s/%s", branch, owner, repo)
+}
+
+func (c *ghAppClient) GetBranch(ctx context.Context, owner, repo, branch string) (*github.Branch, error) {
+	client, err := c.getOwnerInstallationClient(ctx, owner)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to get owner installation client")
+	}
+
+	branchInfo, resp, err := client.Repositories.GetBranch(ctx, owner, repo, branch, true)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, errors.Wrapf(err, "branch %s not found in repo %s/%s", branch, owner, repo)
+		}
+		return nil, errors.Wrapf(err, "fail to get branch %s of repo %s/%s", branch, owner, repo)
+	}
+
+	return branchInfo, nil
 }

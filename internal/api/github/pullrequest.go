@@ -5,6 +5,8 @@ import (
 
 	"github.com/google/go-github/v52/github"
 
+	"github.com/ergomake/ergomake/internal/environments"
+	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/logger"
 )
 
@@ -38,11 +40,11 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 		return
 	}
 
-	terminateEnv := &terminateEnvironment{
-		owner:    owner,
-		repo:     repoName,
-		branch:   branch,
-		prNumber: github.Int(prNumber),
+	terminateEnv := environments.TerminateEnvironmentRequest{
+		Owner:    owner,
+		Repo:     repoName,
+		Branch:   branch,
+		PrNumber: github.Int(prNumber),
 	}
 
 	log.Info().Msg("got a pull request event from github")
@@ -53,7 +55,7 @@ func (r *githubRouter) handlePullRequestEvent(githubDelivery string, event *gith
 			log.Err(err).Msg("fail to terminate environment")
 		}
 
-		launchEnv := &LaunchEnvironment{
+		launchEnv := ghlauncher.LaunchEnvironmentRequest{
 			Owner:       owner,
 			BranchOwner: branchOwner,
 			Repo:        repoName,

@@ -14,8 +14,10 @@ import (
 	environmentsMocks "github.com/ergomake/ergomake/mocks/environments"
 	envvarsMocks "github.com/ergomake/ergomake/mocks/envvars"
 	ghAppMocks "github.com/ergomake/ergomake/mocks/github/ghapp"
+	ghlauncherMocks "github.com/ergomake/ergomake/mocks/github/ghlauncher"
 	paymentMocks "github.com/ergomake/ergomake/mocks/payment"
 	permanentbranchesMocks "github.com/ergomake/ergomake/mocks/permanentbranches"
+	privregistryMocks "github.com/ergomake/ergomake/mocks/privregistry"
 	servicelogsMocks "github.com/ergomake/ergomake/mocks/servicelogs"
 	usersMocks "github.com/ergomake/ergomake/mocks/users"
 )
@@ -40,6 +42,8 @@ func TestV2Health(t *testing.T) {
 
 			ghApp := ghAppMocks.NewGHAppClient(t)
 			apiServer := api.NewServer(
+				ghlauncherMocks.NewGHLauncher(t),
+				privregistryMocks.NewPrivRegistryProvider(t),
 				db,
 				servicelogsMocks.NewLogStreamer(t),
 				ghApp,

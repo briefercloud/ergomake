@@ -233,21 +233,19 @@ func (_c *GHAppClient_DoesBranchExist_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
-// GetBranch provides a mock function with given fields: ctx, owner, repo, branch
-func (_m *GHAppClient) GetBranch(ctx context.Context, owner string, repo string, branch string) (*github.Branch, error) {
+// GetBranchSHA provides a mock function with given fields: ctx, owner, repo, branch
+func (_m *GHAppClient) GetBranchSHA(ctx context.Context, owner string, repo string, branch string) (string, error) {
 	ret := _m.Called(ctx, owner, repo, branch)
 
-	var r0 *github.Branch
+	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (*github.Branch, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
 		return rf(ctx, owner, repo, branch)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) *github.Branch); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
 		r0 = rf(ctx, owner, repo, branch)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*github.Branch)
-		}
+		r0 = ret.Get(0).(string)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
@@ -259,33 +257,33 @@ func (_m *GHAppClient) GetBranch(ctx context.Context, owner string, repo string,
 	return r0, r1
 }
 
-// GHAppClient_GetBranch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBranch'
-type GHAppClient_GetBranch_Call struct {
+// GHAppClient_GetBranchSHA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBranchSHA'
+type GHAppClient_GetBranchSHA_Call struct {
 	*mock.Call
 }
 
-// GetBranch is a helper method to define mock.On call
+// GetBranchSHA is a helper method to define mock.On call
 //   - ctx context.Context
 //   - owner string
 //   - repo string
 //   - branch string
-func (_e *GHAppClient_Expecter) GetBranch(ctx interface{}, owner interface{}, repo interface{}, branch interface{}) *GHAppClient_GetBranch_Call {
-	return &GHAppClient_GetBranch_Call{Call: _e.mock.On("GetBranch", ctx, owner, repo, branch)}
+func (_e *GHAppClient_Expecter) GetBranchSHA(ctx interface{}, owner interface{}, repo interface{}, branch interface{}) *GHAppClient_GetBranchSHA_Call {
+	return &GHAppClient_GetBranchSHA_Call{Call: _e.mock.On("GetBranchSHA", ctx, owner, repo, branch)}
 }
 
-func (_c *GHAppClient_GetBranch_Call) Run(run func(ctx context.Context, owner string, repo string, branch string)) *GHAppClient_GetBranch_Call {
+func (_c *GHAppClient_GetBranchSHA_Call) Run(run func(ctx context.Context, owner string, repo string, branch string)) *GHAppClient_GetBranchSHA_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
 	})
 	return _c
 }
 
-func (_c *GHAppClient_GetBranch_Call) Return(_a0 *github.Branch, _a1 error) *GHAppClient_GetBranch_Call {
+func (_c *GHAppClient_GetBranchSHA_Call) Return(_a0 string, _a1 error) *GHAppClient_GetBranchSHA_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *GHAppClient_GetBranch_Call) RunAndReturn(run func(context.Context, string, string, string) (*github.Branch, error)) *GHAppClient_GetBranch_Call {
+func (_c *GHAppClient_GetBranchSHA_Call) RunAndReturn(run func(context.Context, string, string, string) (string, error)) *GHAppClient_GetBranchSHA_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -587,6 +585,60 @@ func (_c *GHAppClient_IsOwnerInstalled_Call) Return(_a0 bool, _a1 error) *GHAppC
 }
 
 func (_c *GHAppClient_IsOwnerInstalled_Call) RunAndReturn(run func(context.Context, string) (bool, error)) *GHAppClient_IsOwnerInstalled_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsRepoPrivate provides a mock function with given fields: ctx, owner, repo
+func (_m *GHAppClient) IsRepoPrivate(ctx context.Context, owner string, repo string) (bool, error) {
+	ret := _m.Called(ctx, owner, repo)
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (bool, error)); ok {
+		return rf(ctx, owner, repo)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) bool); ok {
+		r0 = rf(ctx, owner, repo)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, owner, repo)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GHAppClient_IsRepoPrivate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsRepoPrivate'
+type GHAppClient_IsRepoPrivate_Call struct {
+	*mock.Call
+}
+
+// IsRepoPrivate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+//   - repo string
+func (_e *GHAppClient_Expecter) IsRepoPrivate(ctx interface{}, owner interface{}, repo interface{}) *GHAppClient_IsRepoPrivate_Call {
+	return &GHAppClient_IsRepoPrivate_Call{Call: _e.mock.On("IsRepoPrivate", ctx, owner, repo)}
+}
+
+func (_c *GHAppClient_IsRepoPrivate_Call) Run(run func(ctx context.Context, owner string, repo string)) *GHAppClient_IsRepoPrivate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *GHAppClient_IsRepoPrivate_Call) Return(_a0 bool, _a1 error) *GHAppClient_IsRepoPrivate_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *GHAppClient_IsRepoPrivate_Call) RunAndReturn(run func(context.Context, string, string) (bool, error)) *GHAppClient_IsRepoPrivate_Call {
 	_c.Call.Return(run)
 	return _c
 }

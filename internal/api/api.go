@@ -76,6 +76,8 @@ func corsMiddleware(allowOrigin string) gin.HandlerFunc {
 }
 
 func NewServer(
+	ghLauncher ghlauncher.GHLauncher,
+	privRegistryProvider privregistry.PrivRegistryProvider,
 	db *database.DB,
 	logStreamer servicelogs.LogStreamer,
 	ghApp ghapp.GHAppClient,
@@ -100,18 +102,6 @@ func NewServer(
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	privRegistryProvider := privregistry.NewDBPrivRegistryProvider(db, cfg.PrivRegistriesSecret)
-
-	ghLauncher := ghlauncher.NewGHLauncher(
-		db,
-		ghApp,
-		clusterClient,
-		envVarsProvider,
-		privRegistryProvider,
-		environmentsProvider,
-		cfg.DockerhubPullSecretName,
-		cfg.FrontendURL,
-	)
 	ghRouter := github.NewGithubRouter(
 		ghLauncher,
 		db,

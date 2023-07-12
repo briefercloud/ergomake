@@ -1,7 +1,7 @@
 import AnsiToHTML from 'ansi-to-html'
 import classNames from 'classnames'
 import * as dfns from 'date-fns'
-import { useCallback, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
 import Layout from '../components/Layout'
@@ -13,6 +13,7 @@ import { isError, isLoading, orElse } from '../hooks/useHTTPRequest'
 import useLiveLogs from '../hooks/useLiveLogs'
 import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
+import { EnvironmentStatusStyle } from './Environments'
 
 const secondaryNavigation: Array<{ name: string; logType: LogType }> = [
   { name: 'Live logs', logType: 'live' },
@@ -34,7 +35,7 @@ type LogType = 'build' | 'live'
 
 const converter = new AnsiToHTML()
 
-const Details = ({ profile }: Props) => {
+function Environment({ profile }: Props) {
   const params = useParams()
   const ownersRes = useOwners()
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
@@ -48,22 +49,29 @@ const Details = ({ profile }: Props) => {
     [owners, params.owner]
   )
 
-  const environmentRes = useEnvironment(
+  const [environmentRes, refetchEnv] = useEnvironment(
     params.owner ?? '',
     params.repo ?? '',
     params.env ?? ''
   )
+  useEffect(() => {
+    const interval = setInterval(refetchEnv, 5000)
+    return () => {
+      clearInterval(interval)
+    }
+  }, [refetchEnv])
 
   const [logType, setLogsType] = useState<LogType>('build')
 
-  const onChangeLogsType = useCallback(() => {
-    setLogsType((s) => (s === 'live' ? 'build' : 'live'))
-  }, [setLogsType])
-
-  const [buildLogs, _buildLogsErr, buildLogsRetry] = useBuildLogs(
+  const [buildLogs, buildLogsErr, buildLogsRetry] = useBuildLogs(
     params.env ?? ''
   )
-  const [liveLogs, _liveLogsErr, liveLogsRetry] = useLiveLogs(params.env ?? '')
+  void buildLogsErr
+  void buildLogsRetry
+
+  const [liveLogs, liveLogsErr, liveLogsRetry] = useLiveLogs(params.env ?? '')
+  void liveLogsErr
+  void liveLogsRetry
 
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0)
 
@@ -131,7 +139,12 @@ const Details = ({ profile }: Props) => {
         <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
           <div>
             <div className="flex items-center gap-x-3">
-              <div className="flex-none rounded-full bg-green-400/10 p-1 text-green-400">
+              <div
+                className={classNames(
+                  'flex-none rounded-full p-1',
+                  EnvironmentStatusStyle[environment.status]
+                )}
+              >
                 <div className="h-2 w-2 rounded-full bg-current" />
               </div>
               <h1 className="flex gap-x-3 text-base leading-7">
@@ -216,4 +229,4 @@ const Details = ({ profile }: Props) => {
   )
 }
 
-export default Details
+export default Environment

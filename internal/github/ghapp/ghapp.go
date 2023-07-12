@@ -22,12 +22,16 @@ import (
 const CheckName string = "Ergomake"
 
 var InstallationNotFoundError = errors.New("installation not found")
-var repoNotFoundError = errors.New("repository not found")
+var RepoNotFoundError = errors.New("repository not found")
+var BranchNotFoundError = errors.New("branch not found")
 
 type GHAppClient interface {
 	git.RemoteGitClient
 	CreateCommitStatus(ctx context.Context, owner, repo, sha, state string, targetURL *string) error
-	UpsertComment(ctx context.Context, owner string, repo string, prNumber int, commentID int64, comment string) (*github.IssueComment, error)
+	UpsertComment(
+		ctx context.Context,
+		owner string, repo string, prNumber int, commentID int64, comment string,
+	) (*github.IssueComment, error)
 	ListOwnerInstalledRepos(ctx context.Context, owner string) ([]*github.Repository, error)
 	IsOwnerInstalled(ctx context.Context, owner string) (bool, error)
 	GetInstallation(ctx context.Context, installationID int64) (*github.Installation, error)
@@ -38,7 +42,8 @@ type GHAppClient interface {
 		changes map[string]string,
 		title, description string,
 	) (*github.PullRequest, error)
-	GetBranch(ctx context.Context, owner, repo, branch string) (*github.Branch, error)
+	GetBranchSHA(ctx context.Context, owner, repo, branch string) (string, error)
+	IsRepoPrivate(ctx context.Context, owner, repo string) (bool, error)
 }
 
 type ghAppClient struct {
@@ -100,7 +105,7 @@ func (gh *ghAppClient) GetDefaultBranch(ctx context.Context, owner string, repo 
 	repository, resp, err := installationClient.Repositories.Get(ctx, branchOwner, repo)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return "", repoNotFoundError
+			return "", RepoNotFoundError
 		}
 		return "", errors.Wrap(err, "failed to get repository")
 	}
@@ -427,19 +432,38 @@ func (c *ghAppClient) CreatePullRequest(
 	return pr, errors.Wrapf(err, "fail to create pull request for branch %s at repo %s/%s", branch, owner, repo)
 }
 
-func (c *ghAppClient) GetBranch(ctx context.Context, owner, repo, branch string) (*github.Branch, error) {
+func (c *ghAppClient) GetBranchSHA(ctx context.Context, owner, repo, branch string) (string, error) {
 	client, err := c.getOwnerInstallationClient(ctx, owner)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail to get owner installation client")
+		return "", errors.Wrap(err, "fail to get owner installation client")
 	}
 
 	branchInfo, resp, err := client.Repositories.GetBranch(ctx, owner, repo, branch, true)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, errors.Wrapf(err, "branch %s not found in repo %s/%s", branch, owner, repo)
+			return "", BranchNotFoundError
 		}
-		return nil, errors.Wrapf(err, "fail to get branch %s of repo %s/%s", branch, owner, repo)
+
+		return "", errors.Wrapf(err, "fail to get branch %s of repo %s/%s", branch, owner, repo)
 	}
 
-	return branchInfo, nil
+	return branchInfo.GetCommit().GetSHA(), nil
+}
+
+func (c *ghAppClient) IsRepoPrivate(ctx context.Context, owner, repo string) (bool, error) {
+	client, err := c.getOwnerInstallationClient(ctx, owner)
+	if err != nil {
+		return false, errors.Wrap(err, "fail to get owner installation client")
+	}
+
+	repository, resp, err := client.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return false, RepoNotFoundError
+		}
+
+		return false, errors.Wrapf(err, "fail to get repository %s/%s", owner, repo)
+	}
+
+	return repository.GetPrivate(), nil
 }

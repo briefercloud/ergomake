@@ -282,7 +282,7 @@ func SuccessRun(
 	log := logger.Ctx(ctx)
 
 	if env.PullRequest.Valid {
-		comment := createSuccessComment(compose)
+		comment := createSuccessComment(compose, envFrontendLink)
 		ghComment, err := ghApp.UpsertComment(ctx, env.Owner, env.Repo, int(env.PullRequest.Int32), env.GHCommentID, comment)
 		if err != nil {
 			log.Err(err).Msg("fail to post success comment")

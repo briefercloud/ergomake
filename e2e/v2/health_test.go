@@ -15,6 +15,7 @@ import (
 	envvarsMocks "github.com/ergomake/ergomake/mocks/envvars"
 	ghAppMocks "github.com/ergomake/ergomake/mocks/github/ghapp"
 	paymentMocks "github.com/ergomake/ergomake/mocks/payment"
+	permanentbranchesMocks "github.com/ergomake/ergomake/mocks/permanentbranches"
 	servicelogsMocks "github.com/ergomake/ergomake/mocks/servicelogs"
 	usersMocks "github.com/ergomake/ergomake/mocks/users"
 )
@@ -47,6 +48,7 @@ func TestV2Health(t *testing.T) {
 				environmentsMocks.NewEnvironmentsProvider(t),
 				usersMocks.NewService(t),
 				paymentMocks.NewPaymentProvider(t),
+				permanentbranchesMocks.NewPermanentBranchesProvider(t),
 				&api.Config{},
 			)
 			server := httptest.NewServer(apiServer)

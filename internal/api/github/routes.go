@@ -8,25 +8,27 @@ import (
 	"github.com/ergomake/ergomake/internal/environments"
 	"github.com/ergomake/ergomake/internal/envvars"
 	"github.com/ergomake/ergomake/internal/github/ghapp"
+	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/payment"
 	"github.com/ergomake/ergomake/internal/privregistry"
 )
 
 type githubRouter struct {
-	db                   *database.DB
-	ghApp                ghapp.GHAppClient
-	clusterClient        cluster.Client
-	envVarsProvider      envvars.EnvVarsProvider
-	privRegistryProvider privregistry.PrivRegistryProvider
-	environmentsProvider environments.EnvironmentsProvider
-	paymentProvider      payment.PaymentProvider
-	webhookSecret        string
-	frontendURL          string
-
+	ghLauncher              ghlauncher.GHLauncher
+	db                      *database.DB
+	ghApp                   ghapp.GHAppClient
+	clusterClient           cluster.Client
+	envVarsProvider         envvars.EnvVarsProvider
+	privRegistryProvider    privregistry.PrivRegistryProvider
+	environmentsProvider    environments.EnvironmentsProvider
+	paymentProvider         payment.PaymentProvider
+	webhookSecret           string
+	frontendURL             string
 	dockerhubPullSecretName string
 }
 
 func NewGithubRouter(
+	ghLauncher ghlauncher.GHLauncher,
 	db *database.DB,
 	ghApp ghapp.GHAppClient,
 	clusterClient cluster.Client,
@@ -39,6 +41,7 @@ func NewGithubRouter(
 	dockerhubPullSecretName string,
 ) *githubRouter {
 	return &githubRouter{
+		ghLauncher,
 		db,
 		ghApp,
 		clusterClient,

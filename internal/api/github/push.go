@@ -7,6 +7,8 @@ import (
 	"github.com/google/go-github/v52/github"
 	"github.com/pkg/errors"
 
+	"github.com/ergomake/ergomake/internal/environments"
+	"github.com/ergomake/ergomake/internal/github/ghlauncher"
 	"github.com/ergomake/ergomake/internal/logger"
 )
 
@@ -47,18 +49,18 @@ func (r *githubRouter) handlePushEvent(githubDelivery string, event *github.Push
 		return
 	}
 
-	terminateEnv := &terminateEnvironment{
-		owner:    owner,
-		repo:     repoName,
-		branch:   branch,
-		prNumber: nil,
+	terminateEnv := environments.TerminateEnvironmentRequest{
+		Owner:    owner,
+		Repo:     repoName,
+		Branch:   branch,
+		PrNumber: nil,
 	}
-	err = r.terminateEnvironment(ctx, terminateEnv)
+	err = r.environmentsProvider.TerminateEnvironment(ctx, terminateEnv)
 	if err != nil {
 		log.Err(err).Msg("fail to terminate environment")
 	}
 
-	launchEnv := &LaunchEnvironment{
+	launchEnv := ghlauncher.LaunchEnvironmentRequest{
 		Owner:       owner,
 		BranchOwner: owner,
 		Repo:        repoName,

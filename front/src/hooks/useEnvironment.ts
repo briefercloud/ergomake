@@ -60,7 +60,7 @@ export const useEnvironment = (
   repo: string,
   id: string
 ): HTTPResponse<Environment | null> => {
-  const envs = useEnvironmentsByRepo(owner, repo)
+  const [envs] = useEnvironmentsByRepo(owner, repo)
 
   return useMemo(
     () => map(envs, (envs) => envs.find((e) => e.id === id) ?? null),

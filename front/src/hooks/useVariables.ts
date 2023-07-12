@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 
 import {
   HTTPResponse,
+  andThen,
   isLoading,
   useHTTPMutation,
   useHTTPRequest,
@@ -26,7 +27,7 @@ export const useVariables = (owner: string, repo: string): UseVariables => {
     }
 
     if (isLoading(vars)) {
-      return [initial, update]
+      return [andThen(initial, (i) => ({ ...i, refreshing: true })), update]
     }
 
     return [vars, update]

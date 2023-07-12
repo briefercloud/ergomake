@@ -888,6 +888,7 @@ func (c *gitCompose) fixDeployment(ctx context.Context, obj runtime.Object) ([]r
 	c.fixRestartPolicy(deployment)
 	c.fixPullPolicy(deployment)
 	c.addResourceLimits(deployment)
+	c.removeHostPort(deployment)
 
 	envVarsSecret, err := c.addEnvVars(ctx, deployment)
 	if err != nil {
@@ -959,6 +960,15 @@ func (c *gitCompose) addResourceLimits(deployment *appsv1.Deployment) {
 		podSpec.Containers[i].Resources.Requests = corev1.ResourceList{
 			corev1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			corev1.ResourceMemory:           resource.MustParse("1Gi"),
+		}
+	}
+}
+
+func (c *gitCompose) removeHostPort(deployment *appsv1.Deployment) {
+	podSpec := &deployment.Spec.Template.Spec
+	for i := range podSpec.Containers {
+		for j := range podSpec.Containers[i].Ports {
+			podSpec.Containers[i].Ports[j].HostPort = 0
 		}
 	}
 }

@@ -81,7 +81,7 @@ function List<T>({ items, emptyState }: ListProps<T>) {
   }
 
   return (
-    <ul>
+    <ul className="h-full overflow-y-scroll">
       {items.map((item, i) => (
         <li key={i}>
           <Item {...item} />

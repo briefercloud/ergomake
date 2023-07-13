@@ -331,14 +331,14 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
           closeSidebar={() => setSidebarOpen(false)}
         />
 
-        <div className="lg:pl-72 h-full flex flex-col overflow-hidden">
+        <div className="lg:pl-72 flex flex-col overflow-hidden h-screen">
           <TopNavbar
             pages={pages}
             profile={profile}
             openSidebar={() => setSidebarOpen(true)}
           />
 
-          <main className="flex flex-col h-full">
+          <main className="flex flex-col h-screen overflow-hidden">
             {currentOwner && !currentOwner.isPaying && (
               <BillingAlert owner={currentOwner.login} />
             )}

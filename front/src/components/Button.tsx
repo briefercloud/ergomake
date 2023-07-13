@@ -20,10 +20,11 @@ function Button(props: Props) {
     'focus-visible:outline-2',
     'focus-visible:outline-offset-2',
     'focus-visible:outline-primary-600',
+    'dark:border dark:border-primary-400',
     {
-      'bg-primary-600': !buttonProps.disabled,
+      'bg-primary-600 dark:bg-primary-800': !buttonProps.disabled,
       'bg-gray-400': buttonProps.disabled,
-      'hover:bg-primary-500': !buttonProps.disabled,
+      'hover:bg-primary-500 dark:hover:bg-primary-700': !buttonProps.disabled,
       flex: loading,
       'items-center': loading,
       'justify-center': loading,

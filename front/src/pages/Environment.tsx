@@ -136,7 +136,7 @@ function Environment({ profile }: Props) {
     <Layout profile={profile} pages={pages}>
       <header>
         {/* Heading */}
-        <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+        <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white dark:bg-neutral-950 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
           <div>
             <div className="flex items-center gap-x-3">
               <div
@@ -148,11 +148,11 @@ function Environment({ profile }: Props) {
                 <div className="h-2 w-2 rounded-full bg-current" />
               </div>
               <h1 className="flex gap-x-3 text-base leading-7">
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-gray-800 dark:text-neutral-300">
                   {params.repo}
                 </span>
-                <span className="text-gray-600">/</span>
-                <span className="font-semibold text-gray-800">
+                <span className="text-gray-600 dark:text-neutral-500">/</span>
+                <span className="font-semibold text-gray-800 dark:text-neutral-300">
                   {environment.branch}
                 </span>
               </h1>
@@ -180,7 +180,7 @@ function Environment({ profile }: Props) {
                   : statIdx === 2
                   ? 'lg:border-l'
                   : '',
-                'border-t border-gray-200 py-6 px-4 sm:px-6 lg:px-8'
+                'border-t border-gray-200 dark:border-neutral-800 py-6 px-4 sm:px-6 lg:px-8'
               )}
             >
               <p className="text-sm font-medium leading-6 text-gray-400">
@@ -200,7 +200,7 @@ function Environment({ profile }: Props) {
       </header>
 
       {/* Secondary navigation */}
-      <nav className="flex border-y border-gray-200 border-b-0">
+      <nav className="flex border-y border-gray-200 dark:border-neutral-800 border-b-0">
         <ul className="flex justify-between min-w-full flex-none text-sm font-semibold leading-6 text-gray-800 [&>li]:h-full [&>li]:flex [&>li]:grow [&>li]:items-center  [&>li]:justify-center items-center [&>li]:flex-1">
           <li className="bg-red">
             <Select options={selectOptions} onChange={setCurrentServiceIndex} />
@@ -210,9 +210,9 @@ function Environment({ profile }: Props) {
               key={item.name}
               className={classNames(
                 item.logType === logType
-                  ? 'text-primary-400 shadow-inner bg-gray-100'
+                  ? 'text-primary-400 dark:text-primary-200 shadow-inner shadow-gray-900 bg-gray-100 dark:bg-neutral-800'
                   : 'text-gray-400',
-                'hover:bg-gray-100 hover:cursor-pointer'
+                'hover:bg-gray-100 dark:hover:bg-neutral-800 hover:cursor-pointer'
               )}
               onClick={() => setLogsType(item.logType)}
             >
@@ -222,7 +222,7 @@ function Environment({ profile }: Props) {
         </ul>
       </nav>
 
-      <div className="bg-gray-800 font-mono p-4 overflow-y-scroll overflow-x-scroll h-full">
+      <div className="bg-gray-800 dark:bg-neutral-700 font-mono p-4 overflow-y-scroll overflow-x-scroll h-full">
         {selectedLogs}
       </div>
     </Layout>

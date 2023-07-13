@@ -90,7 +90,7 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-700 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -104,18 +104,18 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white dark:bg-neutral-950 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
                 {!state.loading && (
                   <div>
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-700">
                       {state.pullRequestURL === null ? (
                         <FolderPlusIcon
-                          className="h-6 w-6 text-green-600"
+                          className="h-6 w-6 text-green-600 dark:text-green-300"
                           aria-hidden="true"
                         />
                       ) : (
                         <CheckIcon
-                          className="h-6 w-6 text-green-600"
+                          className="h-6 w-6 text-green-600 dark:text-green-300"
                           aria-hidden="true"
                         />
                       )}
@@ -123,7 +123,7 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
                     <div className="mt-3 text-center sm:mt-5">
                       <Dialog.Title
                         as="h3"
-                        className="text-base font-semibold leading-6 text-gray-900"
+                        className="text-base font-semibold leading-6 text-gray-900 dark:text-neutral-200"
                       >
                         {!state.pullRequestURL
                           ? 'Automatic configuration'
@@ -131,14 +131,14 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
                       </Dialog.Title>
                       <div className="mt-2">
                         {!state.pullRequestURL ? (
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-neutral-400">
                             Ergomake will automatically create a pull request
                             with all the necessary configurations to deploy new
                             environments.
                           </p>
                         ) : (
                           <>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 dark:text-neutral-400">
                               Your pull request is ready. Here is a link to view
                               it:
                             </p>
@@ -160,16 +160,16 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
                 )}
                 {state.loading && (
                   <div>
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-primary-700">
                       <ArrowPathIcon
-                        className="h-6 w-6 text-green-600 animate-spin"
+                        className="h-6 w-6 text-green-600 dark:text-green-300 animate-spin"
                         aria-hidden="true"
                       />
                     </div>
                     <div className="mt-3 text-center sm:mt-5">
                       <Dialog.Title
                         as="h3"
-                        className="text-base font-semibold leading-6 text-gray-900"
+                        className="text-base font-semibold leading-6 text-gray-900 dark:text-neutral-200"
                       >
                         Creating pull request...
                       </Dialog.Title>

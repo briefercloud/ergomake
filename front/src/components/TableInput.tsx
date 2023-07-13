@@ -63,7 +63,7 @@ const TableInput = (props: TableInputProps) => {
           <span className="w-16"></span>
         </div>
 
-        <div className="w-full flex border-b border-gray-200 py-4 px-4 sm:px-6 lg:px-8">
+        <div className="w-full flex border-b border-gray-200 dark:border-neutral-800 py-4 px-4 sm:px-6 lg:px-8">
           {current.map((v, i) => (
             <div className="flex-1 grow">
               <Input
@@ -86,7 +86,7 @@ const TableInput = (props: TableInputProps) => {
 
       <div className="h-full overflow-y-scroll">
         {props.values.map((cells, i) => (
-          <div className="flex items-center w-full h-16 border-b border-gray-200 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center w-full h-16 border-b dark:border-neutral-800 border-gray-200 px-4 sm:px-6 lg:px-8">
             {cells.map((c, i) => (
               <span
                 key={i}
@@ -94,8 +94,8 @@ const TableInput = (props: TableInputProps) => {
                   'flex-1 grow whitespace-nowrap py-4 text-sm font-medium',
                   {
                     'pl-1': i > 0,
-                    'text-gray-900': i === 0,
-                    'text-gray-500': i > 0,
+                    'text-gray-900 dark:text-neutral-200': i === 0,
+                    'text-gray-500 dark:text-neutral-500': i > 0,
                   }
                 )}
               >
@@ -106,7 +106,7 @@ const TableInput = (props: TableInputProps) => {
               <button onClick={onRemove(i)} disabled={props.loading}>
                 <TrashIcon
                   className={classNames('h-5 w-5 flex-shrink-0', {
-                    'text-red-600 hover:text-red-400 hover:cursor-pointer':
+                    'text-red-600 dark:text-red-400 hover:text-red-400 dark:hover:text-red-300 hover:cursor-pointer':
                       !props.loading,
                     'text-gray-600': props.loading,
                   })}
@@ -117,7 +117,7 @@ const TableInput = (props: TableInputProps) => {
           </div>
         ))}
       </div>
-      <div className="flex bg-gray-200 items-center justify-between py-4 px-4 sm:px-6 lg:px-8">
+      <div className="flex bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 items-center justify-between py-4 px-4 sm:px-6 lg:px-8">
         <span>{props.saveLabel}</span>
         <Button
           loading={props.loading}

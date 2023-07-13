@@ -1,12 +1,12 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import { RequireAuth, RequireNoAuth } from './components/RequireAuth'
-import PublicEnvironment from './pages/PublicEnvironment'
 import Environment from './pages/Environment'
 import Environments from './pages/Environments'
 import Login from './pages/Login'
 import NoInstallation from './pages/NoInstallation'
 import Projects from './pages/Projects'
+import PublicEnvironment from './pages/PublicEnvironment'
 import Purchase from './pages/Purchase'
 
 const router = createBrowserRouter([
@@ -65,6 +65,16 @@ const router = createBrowserRouter([
 ])
 
 function App() {
+  if (
+    localStorage.theme === 'dark' ||
+    (!('theme' in localStorage) &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches)
+  ) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+
   return <RouterProvider router={router} />
 }
 

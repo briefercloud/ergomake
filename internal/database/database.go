@@ -1,8 +1,13 @@
 package database
 
 import (
+	"log"
+	"os"
+	"time"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type DB struct {
@@ -10,7 +15,15 @@ type DB struct {
 }
 
 func Connect(url string) (*DB, error) {
-	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
+	config := &gorm.Config{
+		Logger: logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Warn,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		})}
+
+	db, err := gorm.Open(postgres.Open(url), config)
 	if err != nil {
 		return nil, err
 	}

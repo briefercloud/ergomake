@@ -67,6 +67,7 @@ func (vr *variablesRouter) upsert(c *gin.Context) {
 		toKeep[fmt.Sprintf("%s/%s", v.Name, branch)] = true
 	}
 
+	fmt.Printf("%+v\n", toKeep)
 	for _, v := range existingList {
 		branch := ""
 		if v.Branch != nil {

@@ -55,9 +55,10 @@ func (evp *dbEnvVarsProvider) Upsert(ctx context.Context, owner, repo, name, val
 
 	var dbVar DBEnvVar
 	err = evp.db.Table("env_vars").Where(map[string]interface{}{
-		"owner": owner,
-		"repo":  repo,
-		"name":  name,
+		"owner":  owner,
+		"repo":   repo,
+		"name":   name,
+		"branch": branch,
 	}).Assign(map[string]interface{}{
 		"value": encryptedValue,
 	}).FirstOrCreate(&dbVar).Error
@@ -96,7 +97,7 @@ func (evp *dbEnvVarsProvider) ListByRepo(ctx context.Context, owner, repo string
 			return nil, errors.Wrapf(err, "fail to decrypt value of env var %s", v.ID)
 		}
 
-		branch := new(string)
+		var branch *string
 		if v.Branch.Valid {
 			branch = pointer.String(v.Branch.String)
 		}

@@ -52,7 +52,7 @@ func main() {
 		repo := args[1]
 		name := args[2]
 		value := args[3]
-		branch := new(string)
+		var branch *string
 		if len(args) >= 4 {
 			branch = pointer.String(args[4])
 		}
@@ -70,7 +70,7 @@ func main() {
 		owner := args[0]
 		repo := args[1]
 		name := args[2]
-		err := envVarProvider.Delete(context.Background(), owner, repo, name)
+		err := envVarProvider.Delete(context.Background(), owner, repo, name, nil)
 		if err != nil {
 			panic(errors.Wrap(err, "fail to delete environment variable"))
 		}

@@ -7,7 +7,7 @@ import (
 	"github.com/ergomake/ergomake/internal/transformer"
 )
 
-func createSuccessComment(env *transformer.Environment) string {
+func createSuccessComment(env *transformer.Environment, frontendEnvLink string) string {
 	return fmt.Sprintf(`Hi 👋
 
 Here's a preview environment 🚀
@@ -20,11 +20,14 @@ Here's a preview environment 🚀
 | - | - | - |
 %s
 
-Questions? Comments? Suggestions? [Join Discord](https://discord.gg/daGzchUGDt).
+Here are your environment's [logs](%s).
+
+For questions or comments, [join Discord](https://discord.gg/daGzchUGDt).
 
 [Click here](https://github.com/apps/ergomake) to disable Ergomake.`,
 		getMainServiceUrl(env),
 		getServiceTable(env),
+		frontendEnvLink,
 	)
 }
 

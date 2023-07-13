@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"k8s.io/utils/pointer"
 
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/env"
@@ -51,7 +52,11 @@ func main() {
 		repo := args[1]
 		name := args[2]
 		value := args[3]
-		err := envVarProvider.Upsert(context.Background(), owner, repo, name, value)
+		branch := new(string)
+		if len(args) >= 4 {
+			branch = pointer.String(args[4])
+		}
+		err := envVarProvider.Upsert(context.Background(), owner, repo, name, value, branch)
 		if err != nil {
 			panic(errors.Wrap(err, "fail to upsert environment variable"))
 		}

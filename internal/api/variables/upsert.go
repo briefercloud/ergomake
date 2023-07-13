@@ -1,6 +1,7 @@
 package variables
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,8 +10,6 @@ import (
 	"github.com/ergomake/ergomake/internal/envvars"
 	"github.com/ergomake/ergomake/internal/logger"
 )
-
-type upsertVariables = []envvars.EnvVar
 
 func (vr *variablesRouter) upsert(c *gin.Context) {
 	authData, ok := auth.GetAuthData(c)
@@ -38,7 +37,7 @@ func (vr *variablesRouter) upsert(c *gin.Context) {
 		return
 	}
 
-	var body upsertVariables
+	var body []envvars.EnvVar
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"reason": "malformed-payload"})
 		return
@@ -51,27 +50,37 @@ func (vr *variablesRouter) upsert(c *gin.Context) {
 		return
 	}
 
-	toDelete := map[string]struct{}{}
-	for _, e := range existingList {
-		toDelete[e.Name] = struct{}{}
-	}
-
+	toKeep := make(map[string]bool)
 	for _, v := range body {
-		delete(toDelete, v.Name)
-		err := vr.envVarsProvider.Upsert(c, owner, repo, v.Name, v.Value)
+		err := vr.envVarsProvider.Upsert(c, owner, repo, v.Name, v.Value, v.Branch)
 		if err != nil {
 			logger.Ctx(c).Err(err).Msgf("fail to upsert variable %s", v.Name)
 			c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 			return
 		}
+
+		branch := ""
+		if v.Branch != nil {
+			branch = *v.Branch
+		}
+
+		toKeep[fmt.Sprintf("%s/%s", v.Name, branch)] = true
 	}
 
-	for name := range toDelete {
-		err := vr.envVarsProvider.Delete(c, owner, repo, name)
-		if err != nil {
-			logger.Ctx(c).Err(err).Msgf("fail to delete variable %s", name)
-			c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-			return
+	for _, v := range existingList {
+		branch := ""
+		if v.Branch != nil {
+			branch = *v.Branch
+		}
+
+		key := fmt.Sprintf("%s/%s", v.Name, branch)
+		if !toKeep[key] {
+			err := vr.envVarsProvider.Delete(c, owner, repo, v.Name, v.Branch)
+			if err != nil {
+				logger.Ctx(c).Err(err).Msgf("fail to delete variable %s", v.Name)
+				c.JSON(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+				return
+			}
 		}
 	}
 

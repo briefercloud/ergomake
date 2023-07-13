@@ -25,7 +25,7 @@ function Item<T>(props: ListItem<T>) {
         <div className="flex items-center gap-x-3">
           {props.statusBall}
 
-          <h2 className="min-w-0 text-lg font-semibold leading-6 text-primary-900">
+          <h2 className="min-w-0 text-lg font-semibold leading-6 text-primary-900 dark:text-neutral-200">
             <span className="whitespace-nowrap">{props.name}</span>
           </h2>
         </div>
@@ -47,8 +47,11 @@ function Item<T>(props: ListItem<T>) {
   )
 
   const className = classNames(
-    'relative w-full flex items-center space-x-4 py-4 px-8  border-b border-gray-200/70',
-    { 'hover:bg-gray-100 hover:cursor-pointer': props.url !== undefined },
+    'relative w-full flex items-center space-x-4 py-4 px-8  border-b border-neutral-200/70 dark:border-neutral-800/70',
+    {
+      'hover:bg-gray-100 dark:hover:bg-neutral-950/50 hover:cursor-pointer':
+        props.url !== undefined,
+    },
     { 'hover:cursor-not-allowed': props.url === undefined }
   )
 
@@ -81,7 +84,7 @@ function List<T>({ items, emptyState }: ListProps<T>) {
   }
 
   return (
-    <ul className="h-full overflow-y-scroll">
+    <ul className="h-full overflow-y-scroll dark:bg-neutral-900">
       {items.map((item, i) => (
         <li key={i}>
           <Item {...item} />

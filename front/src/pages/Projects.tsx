@@ -58,14 +58,14 @@ const Projects = ({ profile }: Props) => {
   return (
     <Layout profile={profile} pages={pages}>
       <ConfigureRepoModal repo={configuring} onClose={onCloseConfiguring} />
-      <div className="bg-white border-b border-gray-200 flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8  ">
-        <h1 className="flex text-2xl tracking-tight font-semibold text-gray-800 sm:text-4xl h-20 items-center">
+      <div className="bg-white dark:bg-neutral-950 border-b dark:border-neutral-800 border-gray-200 flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8  ">
+        <h1 className="flex text-2xl tracking-tight font-semibold text-gray-800 dark:text-gray-200 sm:text-4xl h-20 items-center">
           Repositories
         </h1>
 
         <a
           href={installationUrl}
-          className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+          className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-800 dark:border dark:border-primary-400 dark:hover:bg-primary-700"
         >
           <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
           Add repository

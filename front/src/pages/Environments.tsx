@@ -139,11 +139,13 @@ const Environments = ({ profile }: Props) => {
 
   return (
     <Layout profile={profile} pages={pages}>
-      <div className="bg-white border-b border-gray-200">
-        <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+      <div className="bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800">
+        <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
           <div className="flex items-center gap-x-3 h-20">
-            <h1 className="flex text-2xl font-bold tracking-tight text-gray-600 sm:text-4xl">
-              <span className="font-semibold text-gray-800">{params.repo}</span>
+            <h1 className="flex text-2xl font-bold tracking-tight sm:text-4xl">
+              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                {params.repo}
+              </span>
             </h1>
           </div>
         </div>

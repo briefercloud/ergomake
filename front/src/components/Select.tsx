@@ -43,13 +43,15 @@ const Select = ({ options, onChange }: SelectOptions) => {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-10 max-h-60 w-full overflow-auto bg-white text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            <Listbox.Options className="absolute z-10 max-h-60 w-full overflow-auto bg-white text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm dark:bg-neutral-900">
               {options.map((option) => (
                 <Listbox.Option
                   key={option.value}
                   className={({ active }) =>
                     classNames(
-                      active ? 'bg-primary-600 text-white' : 'text-gray-900',
+                      active
+                        ? 'bg-primary-600 text-white'
+                        : 'text-gray-900 dark:text-gray-300',
                       'relative cursor-default select-none py-2 pl-3 pr-9'
                     )
                   }
@@ -69,7 +71,7 @@ const Select = ({ options, onChange }: SelectOptions) => {
                       {selected ? (
                         <span
                           className={classNames(
-                            active ? 'text-white' : 'text-indigo-600',
+                            active ? 'text-white' : 'text-primary-600',
                             'absolute inset-y-0 right-0 flex items-center pr-4'
                           )}
                         >

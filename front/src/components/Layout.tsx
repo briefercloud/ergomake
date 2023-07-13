@@ -1,9 +1,9 @@
 import { Dialog, Menu, Transition } from '@headlessui/react'
-import { ChevronDownIcon } from '@heroicons/react/20/solid'
+import { ChevronDownIcon, MoonIcon, SunIcon } from '@heroicons/react/20/solid'
 import { PlusCircleIcon } from '@heroicons/react/24/outline'
 import { Bars3Icon, FolderIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import classNames from 'classnames'
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import BillingAlert from '../components/BillingAlert'
@@ -25,7 +25,7 @@ const logoutUrl = `${process.env.REACT_APP_ERGOMAKE_API}/v2/auth/logout?redirect
 
 const userNavigation = [{ name: 'Sign out', href: logoutUrl }]
 
-const sidebarColor = `bg-white shadow`
+const sidebarColor = `bg-white dark:bg-neutral-950 shadow dark:border-r dark:border-neutral-900`
 
 type DesktopSidebarProps = {
   owners: Owner[]
@@ -62,7 +62,7 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
                       href={item.href}
                       className={classNames(
                         item.current
-                          ? 'text-gray-50 bg-primary-600'
+                          ? 'bg-primary-600 text-gray-50 dark:bg-primary-800 dark:border dark:border-primary-400 dark:text-neutral-200 dark:hover:bg-primary-700'
                           : 'text-gray-400',
                         'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold hover:bg-primary-400 hover:text-gray-50'
                       )}
@@ -78,7 +78,7 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
               </ul>
             </li>
             <li>
-              <div className="text-xs font-semibold leading-6 text-gray-400">
+              <div className="text-xs font-semibold leading-6 text-gray-400 dark:text-gray-500">
                 Your accounts
               </div>
               <ul className="pt-2 space-y-1">
@@ -87,9 +87,9 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
                     key={owner.login}
                     className={classNames(
                       owner.login === currentOwner
-                        ? 'text-primary-600'
-                        : 'text-gray-400',
-                      'group flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer'
+                        ? 'text-primary-600 dark:text-primary-400'
+                        : 'text-gray-400 dark:text-gray-500',
+                      'group flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400  dark:hover:text-primary-300 hover:cursor-pointer'
                     )}
                     onClick={() => onChangeOwner(owner.login)}
                   >
@@ -107,7 +107,7 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
                   </li>
                 ))}
 
-                <li className="group text-gray-400 flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer">
+                <li className="group text-gray-400 dark:text-gray-500 dark:hover:text-primary-300 flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer">
                   <a href={installationUrl} className="flex gap-x-3">
                     <PlusCircleIcon className="h-6 w-6" aria-hidden="true" />
                     Add organization
@@ -197,7 +197,7 @@ const MobileSidebar = ({ sidebarOpen, closeSidebar }: MobileSidebarProps) => {
                               href={item.href}
                               className={classNames(
                                 item.current
-                                  ? 'bg-primary-700 text-white'
+                                  ? 'bg-primary-700 text-white dark:bg-primary-800 dark:border dark:border-primary-400 dark:text-neutral-300'
                                   : 'text-primary-200 hover:text-white hover:bg-primary-700',
                                 'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
                               )}
@@ -235,8 +235,59 @@ type TopNavbarProps = {
 }
 
 const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
+  // Show sun or moon icon depending on documentElement theme
+  const [theme, setTheme] = useState('dark')
+  const [isDarkened, setIsDarkened] = useState(false)
+
+  // set initial theme depending on localStorage.theme
+  useEffect(() => {
+    const localTheme = window.localStorage.getItem('theme')
+    if (localTheme) {
+      setTheme(localTheme)
+    }
+  }, [])
+
+  // Toggle state between dark and white
+  const toggleTheme = () => {
+    setIsDarkened(true)
+    setTimeout(() => {
+      const newTheme = theme === 'dark' ? 'light' : 'dark'
+      setTheme(newTheme)
+      window.localStorage.setItem('theme', newTheme)
+
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    }, 500)
+  }
+
+  useEffect(() => {
+    if (isDarkened) {
+      const timer = setTimeout(() => {
+        setIsDarkened(false)
+      }, 1000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [isDarkened])
+
   return (
-    <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm md:shadow-none sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
+    <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 shadow-sm md:shadow-none sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: isDarkened ? 'rgba(0, 0, 0, 1)' : 'rgba(0, 0, 0, 0)',
+          zIndex: 9999,
+          transition: 'background 0.5s',
+          pointerEvents: isDarkened ? 'auto' : 'none',
+        }}
+      />
       <button
         type="button"
         className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
@@ -254,11 +305,18 @@ const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
 
       <div className="flex gap-x-4 self-stretch lg:gap-x-6">
         <div className="flex items-center gap-x-4 lg:gap-x-6">
+          <span onClick={toggleTheme}>
+            {theme === 'dark' ? (
+              <SunIcon className="w-6 h-6 text-gray-700 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:cursor-pointer" />
+            ) : (
+              <MoonIcon className="w-6 h-6 text-gray-700 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:cursor-pointer" />
+            )}
+          </span>
           <Menu as="div" className="relative">
             <Menu.Button className="-m-1.5 flex items-center p-1.5">
               <span className="sr-only">Open user menu</span>
               <img
-                className="h-8 w-8 rounded-full bg-gray-50"
+                className="h-8 w-8 rounded-full bg-gray-50 dark:border dark:border-gray-400"
                 src={profile.avatar}
                 alt=""
               />
@@ -278,15 +336,15 @@ const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
+              <Menu.Items className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white dark:bg-gray-950 py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none dark:shadow-neutral-800 dark:border dark:border-gray-800">
                 {userNavigation.map((item) => (
                   <Menu.Item key={item.name}>
                     {({ active }) => (
                       <a
                         href={item.href}
                         className={classNames(
-                          active ? 'bg-gray-50' : '',
-                          'block px-3 py-1 text-sm leading-6 text-gray-900'
+                          active ? 'bg-gray-50 dark:bg-neutral-800' : '',
+                          'block px-3 py-1 text-sm leading-6 text-neutral-900 dark:text-neutral-300'
                         )}
                       >
                         {item.name}

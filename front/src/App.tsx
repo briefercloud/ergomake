@@ -1,6 +1,7 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import { RequireAuth, RequireNoAuth } from './components/RequireAuth'
+import { ThemeContext, useThemeProvider } from './hooks/useTheme'
 import Environment from './pages/Environment'
 import Environments from './pages/Environments'
 import Login from './pages/Login'
@@ -65,17 +66,13 @@ const router = createBrowserRouter([
 ])
 
 function App() {
-  if (
-    localStorage.theme === 'dark' ||
-    (!('theme' in localStorage) &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches)
-  ) {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
+  const themeValue = useThemeProvider()
 
-  return <RouterProvider router={router} />
+  return (
+    <ThemeContext.Provider value={themeValue}>
+      <RouterProvider router={router} />
+    </ThemeContext.Provider>
+  )
 }
 
 export default App

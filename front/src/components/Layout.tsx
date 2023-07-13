@@ -3,7 +3,7 @@ import { ChevronDownIcon, MoonIcon, SunIcon } from '@heroicons/react/20/solid'
 import { PlusCircleIcon } from '@heroicons/react/24/outline'
 import { Bars3Icon, FolderIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import classNames from 'classnames'
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import BillingAlert from '../components/BillingAlert'
@@ -12,6 +12,7 @@ import WebsitePath, { Pages } from '../components/WebsitePath'
 import { orElse } from '../hooks/useHTTPRequest'
 import { Owner, useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
+import { useTheme } from '../hooks/useTheme'
 
 const navigation = [
   { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
@@ -235,43 +236,7 @@ type TopNavbarProps = {
 }
 
 const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
-  // Show sun or moon icon depending on documentElement theme
-  const [theme, setTheme] = useState('dark')
-  const [isDarkened, setIsDarkened] = useState(false)
-
-  // set initial theme depending on localStorage.theme
-  useEffect(() => {
-    const localTheme = window.localStorage.getItem('theme')
-    if (localTheme) {
-      setTheme(localTheme)
-    }
-  }, [])
-
-  // Toggle state between dark and white
-  const toggleTheme = () => {
-    setIsDarkened(true)
-    setTimeout(() => {
-      const newTheme = theme === 'dark' ? 'light' : 'dark'
-      setTheme(newTheme)
-      window.localStorage.setItem('theme', newTheme)
-
-      if (newTheme === 'dark') {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
-    }, 500)
-  }
-
-  useEffect(() => {
-    if (isDarkened) {
-      const timer = setTimeout(() => {
-        setIsDarkened(false)
-      }, 1000)
-
-      return () => clearTimeout(timer)
-    }
-  }, [isDarkened])
+  const [theme, animatingTheme, toggleTheme] = useTheme()
 
   return (
     <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 shadow-sm md:shadow-none sm:gap-x-6 sm:px-6 lg:px-8 flex justify-between">
@@ -282,10 +247,10 @@ const TopNavbar = ({ profile, openSidebar, pages }: TopNavbarProps) => {
           left: 0,
           width: '100%',
           height: '100%',
-          background: isDarkened ? 'rgba(0, 0, 0, 1)' : 'rgba(0, 0, 0, 0)',
+          background: animatingTheme ? 'rgba(0, 0, 0, 1)' : 'rgba(0, 0, 0, 0)',
           zIndex: 9999,
           transition: 'background 0.5s',
-          pointerEvents: isDarkened ? 'auto' : 'none',
+          pointerEvents: animatingTheme ? 'auto' : 'none',
         }}
       />
       <button

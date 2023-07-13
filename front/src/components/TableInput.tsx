@@ -55,7 +55,7 @@ const TableInput = (props: TableInputProps) => {
           {current.map((_, i) => (
             <span
               key={i}
-              className="flex-1 text-sm grow flex-1 text-left font-semibold text-gray-900"
+              className="flex-1 text-sm grow flex-1 text-left font-semibold text-gray-900 dark:text-gray-300"
             >
               {props.labels[i] ?? ''}
             </span>

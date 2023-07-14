@@ -22,13 +22,13 @@ func (_m *EnvVarsProvider) EXPECT() *EnvVarsProvider_Expecter {
 	return &EnvVarsProvider_Expecter{mock: &_m.Mock}
 }
 
-// Delete provides a mock function with given fields: ctx, owner, repo, name
-func (_m *EnvVarsProvider) Delete(ctx context.Context, owner string, repo string, name string) error {
-	ret := _m.Called(ctx, owner, repo, name)
+// Delete provides a mock function with given fields: ctx, owner, repo, name, branch
+func (_m *EnvVarsProvider) Delete(ctx context.Context, owner string, repo string, name string, branch *string) error {
+	ret := _m.Called(ctx, owner, repo, name, branch)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, owner, repo, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, *string) error); ok {
+		r0 = rf(ctx, owner, repo, name, branch)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,13 +46,14 @@ type EnvVarsProvider_Delete_Call struct {
 //   - owner string
 //   - repo string
 //   - name string
-func (_e *EnvVarsProvider_Expecter) Delete(ctx interface{}, owner interface{}, repo interface{}, name interface{}) *EnvVarsProvider_Delete_Call {
-	return &EnvVarsProvider_Delete_Call{Call: _e.mock.On("Delete", ctx, owner, repo, name)}
+//   - branch *string
+func (_e *EnvVarsProvider_Expecter) Delete(ctx interface{}, owner interface{}, repo interface{}, name interface{}, branch interface{}) *EnvVarsProvider_Delete_Call {
+	return &EnvVarsProvider_Delete_Call{Call: _e.mock.On("Delete", ctx, owner, repo, name, branch)}
 }
 
-func (_c *EnvVarsProvider_Delete_Call) Run(run func(ctx context.Context, owner string, repo string, name string)) *EnvVarsProvider_Delete_Call {
+func (_c *EnvVarsProvider_Delete_Call) Run(run func(ctx context.Context, owner string, repo string, name string, branch *string)) *EnvVarsProvider_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(*string))
 	})
 	return _c
 }
@@ -62,7 +63,7 @@ func (_c *EnvVarsProvider_Delete_Call) Return(_a0 error) *EnvVarsProvider_Delete
 	return _c
 }
 
-func (_c *EnvVarsProvider_Delete_Call) RunAndReturn(run func(context.Context, string, string, string) error) *EnvVarsProvider_Delete_Call {
+func (_c *EnvVarsProvider_Delete_Call) RunAndReturn(run func(context.Context, string, string, string, *string) error) *EnvVarsProvider_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }

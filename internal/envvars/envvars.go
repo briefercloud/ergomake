@@ -129,7 +129,7 @@ func (evp *dbEnvVarsProvider) ListByRepoBranch(ctx context.Context, owner, repo,
 		}
 	}
 
-	result := make([]EnvVar, len(vars))
+	result := make([]EnvVar, 0)
 	for _, v := range vars {
 		result = append(result, v)
 	}

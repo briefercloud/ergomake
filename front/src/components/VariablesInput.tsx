@@ -30,7 +30,7 @@ function VariablesInput(props: Props) {
   const [current, setCurrent] = useState<Variable>({
     name: '',
     value: '',
-    branch: '',
+    branch: null,
   })
   const branches = orElse(
     map(repo, (r) => r?.branches ?? []),
@@ -65,15 +65,25 @@ function VariablesInput(props: Props) {
   const onAdd: React.FormEventHandler = useCallback(
     (e) => {
       e.preventDefault()
-      if (!current.name || !current.value) {
-        return
-      }
 
       if (!envVarRegex.test(current.name)) {
         return
       }
 
-      setVariables((vars) => [current].concat(vars))
+      const newVar: Variable = {
+        name: current.name.trim(),
+        value: current.value.trim(),
+        branch: current.branch?.trim() ?? null,
+      }
+      if (newVar.branch === '') {
+        newVar.branch = null
+      }
+
+      if (!newVar.name || !newVar.value) {
+        return
+      }
+
+      setVariables((vars) => [newVar].concat(vars))
       setCurrent({ name: '', value: '', branch: null })
       return
     },

@@ -643,6 +643,62 @@ func (_c *GHAppClient_IsRepoPrivate_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// ListBranches provides a mock function with given fields: ctx, owner, repo
+func (_m *GHAppClient) ListBranches(ctx context.Context, owner string, repo string) ([]string, error) {
+	ret := _m.Called(ctx, owner, repo)
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]string, error)); ok {
+		return rf(ctx, owner, repo)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) []string); ok {
+		r0 = rf(ctx, owner, repo)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, owner, repo)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GHAppClient_ListBranches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListBranches'
+type GHAppClient_ListBranches_Call struct {
+	*mock.Call
+}
+
+// ListBranches is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+//   - repo string
+func (_e *GHAppClient_Expecter) ListBranches(ctx interface{}, owner interface{}, repo interface{}) *GHAppClient_ListBranches_Call {
+	return &GHAppClient_ListBranches_Call{Call: _e.mock.On("ListBranches", ctx, owner, repo)}
+}
+
+func (_c *GHAppClient_ListBranches_Call) Run(run func(ctx context.Context, owner string, repo string)) *GHAppClient_ListBranches_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *GHAppClient_ListBranches_Call) Return(_a0 []string, _a1 error) *GHAppClient_ListBranches_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *GHAppClient_ListBranches_Call) RunAndReturn(run func(context.Context, string, string) ([]string, error)) *GHAppClient_ListBranches_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListInstalledOwners provides a mock function with given fields: ctx
 func (_m *GHAppClient) ListInstalledOwners(ctx context.Context) ([]string, error) {
 	ret := _m.Called(ctx)

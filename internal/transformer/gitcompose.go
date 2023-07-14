@@ -289,7 +289,7 @@ func (c *gitCompose) Transform(ctx context.Context, id uuid.UUID) (*TransformRes
 }
 
 func (c *gitCompose) makeClusterObjects(ctx context.Context, namespace string) ([]runtime.Object, error) {
-	vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, c.repo)
+	vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, c.repo, c.branch)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to list env vars by repo")
 	}
@@ -1016,7 +1016,7 @@ func (c *gitCompose) addEnvVars(ctx context.Context, deployment *appsv1.Deployme
 	service := c.environment.Services[deployment.GetLabels()["io.kompose.service"]]
 	repo, _ := c.computeRepoAndBuildPath(service.Build, c.repo)
 
-	vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, repo)
+	vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, repo, c.branch)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to list env vars by repo")
 	}

@@ -22,13 +22,13 @@ func (_m *EnvVarsProvider) EXPECT() *EnvVarsProvider_Expecter {
 	return &EnvVarsProvider_Expecter{mock: &_m.Mock}
 }
 
-// Delete provides a mock function with given fields: ctx, owner, repo, name
-func (_m *EnvVarsProvider) Delete(ctx context.Context, owner string, repo string, name string) error {
-	ret := _m.Called(ctx, owner, repo, name)
+// Delete provides a mock function with given fields: ctx, owner, repo, name, branch
+func (_m *EnvVarsProvider) Delete(ctx context.Context, owner string, repo string, name string, branch *string) error {
+	ret := _m.Called(ctx, owner, repo, name, branch)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, owner, repo, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, *string) error); ok {
+		r0 = rf(ctx, owner, repo, name, branch)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,13 +46,14 @@ type EnvVarsProvider_Delete_Call struct {
 //   - owner string
 //   - repo string
 //   - name string
-func (_e *EnvVarsProvider_Expecter) Delete(ctx interface{}, owner interface{}, repo interface{}, name interface{}) *EnvVarsProvider_Delete_Call {
-	return &EnvVarsProvider_Delete_Call{Call: _e.mock.On("Delete", ctx, owner, repo, name)}
+//   - branch *string
+func (_e *EnvVarsProvider_Expecter) Delete(ctx interface{}, owner interface{}, repo interface{}, name interface{}, branch interface{}) *EnvVarsProvider_Delete_Call {
+	return &EnvVarsProvider_Delete_Call{Call: _e.mock.On("Delete", ctx, owner, repo, name, branch)}
 }
 
-func (_c *EnvVarsProvider_Delete_Call) Run(run func(ctx context.Context, owner string, repo string, name string)) *EnvVarsProvider_Delete_Call {
+func (_c *EnvVarsProvider_Delete_Call) Run(run func(ctx context.Context, owner string, repo string, name string, branch *string)) *EnvVarsProvider_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(*string))
 	})
 	return _c
 }
@@ -62,7 +63,7 @@ func (_c *EnvVarsProvider_Delete_Call) Return(_a0 error) *EnvVarsProvider_Delete
 	return _c
 }
 
-func (_c *EnvVarsProvider_Delete_Call) RunAndReturn(run func(context.Context, string, string, string) error) *EnvVarsProvider_Delete_Call {
+func (_c *EnvVarsProvider_Delete_Call) RunAndReturn(run func(context.Context, string, string, string, *string) error) *EnvVarsProvider_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -123,13 +124,70 @@ func (_c *EnvVarsProvider_ListByRepo_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
-// Upsert provides a mock function with given fields: ctx, owner, repo, name, value
-func (_m *EnvVarsProvider) Upsert(ctx context.Context, owner string, repo string, name string, value string) error {
-	ret := _m.Called(ctx, owner, repo, name, value)
+// ListByRepoBranch provides a mock function with given fields: ctx, owner, repo, branch
+func (_m *EnvVarsProvider) ListByRepoBranch(ctx context.Context, owner string, repo string, branch string) ([]envvars.EnvVar, error) {
+	ret := _m.Called(ctx, owner, repo, branch)
+
+	var r0 []envvars.EnvVar
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) ([]envvars.EnvVar, error)); ok {
+		return rf(ctx, owner, repo, branch)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) []envvars.EnvVar); ok {
+		r0 = rf(ctx, owner, repo, branch)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]envvars.EnvVar)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, owner, repo, branch)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// EnvVarsProvider_ListByRepoBranch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByRepoBranch'
+type EnvVarsProvider_ListByRepoBranch_Call struct {
+	*mock.Call
+}
+
+// ListByRepoBranch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+//   - repo string
+//   - branch string
+func (_e *EnvVarsProvider_Expecter) ListByRepoBranch(ctx interface{}, owner interface{}, repo interface{}, branch interface{}) *EnvVarsProvider_ListByRepoBranch_Call {
+	return &EnvVarsProvider_ListByRepoBranch_Call{Call: _e.mock.On("ListByRepoBranch", ctx, owner, repo, branch)}
+}
+
+func (_c *EnvVarsProvider_ListByRepoBranch_Call) Run(run func(ctx context.Context, owner string, repo string, branch string)) *EnvVarsProvider_ListByRepoBranch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *EnvVarsProvider_ListByRepoBranch_Call) Return(_a0 []envvars.EnvVar, _a1 error) *EnvVarsProvider_ListByRepoBranch_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *EnvVarsProvider_ListByRepoBranch_Call) RunAndReturn(run func(context.Context, string, string, string) ([]envvars.EnvVar, error)) *EnvVarsProvider_ListByRepoBranch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function with given fields: ctx, owner, repo, name, value, branch
+func (_m *EnvVarsProvider) Upsert(ctx context.Context, owner string, repo string, name string, value string, branch *string) error {
+	ret := _m.Called(ctx, owner, repo, name, value, branch)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string) error); ok {
-		r0 = rf(ctx, owner, repo, name, value)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string, *string) error); ok {
+		r0 = rf(ctx, owner, repo, name, value, branch)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -148,13 +206,14 @@ type EnvVarsProvider_Upsert_Call struct {
 //   - repo string
 //   - name string
 //   - value string
-func (_e *EnvVarsProvider_Expecter) Upsert(ctx interface{}, owner interface{}, repo interface{}, name interface{}, value interface{}) *EnvVarsProvider_Upsert_Call {
-	return &EnvVarsProvider_Upsert_Call{Call: _e.mock.On("Upsert", ctx, owner, repo, name, value)}
+//   - branch *string
+func (_e *EnvVarsProvider_Expecter) Upsert(ctx interface{}, owner interface{}, repo interface{}, name interface{}, value interface{}, branch interface{}) *EnvVarsProvider_Upsert_Call {
+	return &EnvVarsProvider_Upsert_Call{Call: _e.mock.On("Upsert", ctx, owner, repo, name, value, branch)}
 }
 
-func (_c *EnvVarsProvider_Upsert_Call) Run(run func(ctx context.Context, owner string, repo string, name string, value string)) *EnvVarsProvider_Upsert_Call {
+func (_c *EnvVarsProvider_Upsert_Call) Run(run func(ctx context.Context, owner string, repo string, name string, value string, branch *string)) *EnvVarsProvider_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string), args[5].(*string))
 	})
 	return _c
 }
@@ -164,7 +223,7 @@ func (_c *EnvVarsProvider_Upsert_Call) Return(_a0 error) *EnvVarsProvider_Upsert
 	return _c
 }
 
-func (_c *EnvVarsProvider_Upsert_Call) RunAndReturn(run func(context.Context, string, string, string, string) error) *EnvVarsProvider_Upsert_Call {
+func (_c *EnvVarsProvider_Upsert_Call) RunAndReturn(run func(context.Context, string, string, string, string, *string) error) *EnvVarsProvider_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

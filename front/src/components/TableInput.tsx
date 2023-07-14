@@ -84,7 +84,7 @@ const TableInput = (props: TableInputProps) => {
         </div>
       </form>
 
-      <div className="h-full overflow-y-scroll">
+      <div className="h-full overflow-y-auto">
         {props.values.map((cells, i) => (
           <div className="flex items-center w-full h-16 border-b dark:border-neutral-800 border-gray-200 px-4 sm:px-6 lg:px-8">
             {cells.map((c, i) => (

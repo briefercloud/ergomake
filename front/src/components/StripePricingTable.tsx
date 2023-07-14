@@ -17,8 +17,6 @@ const StripePricingTable = (props: Props) => {
     }
   }, [])
 
-  console.log(props.owner)
-
   const pricingTableId = process.env.REACT_APP_STRIPE_PRICING_TABLE_ID
   const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY
 

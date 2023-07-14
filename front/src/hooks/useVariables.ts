@@ -11,6 +11,7 @@ import {
 export type Variable = {
   name: string
   value: string
+  branch: string | null
 }
 
 type UseVariables = [HTTPResponse<Variable[]>, (variables: Variable[]) => void]

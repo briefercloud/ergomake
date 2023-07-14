@@ -87,10 +87,23 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 		environmentCount := envsCountByRepo[repo.GetName()]
 		lastDeployedAt := lastDeployedAtByRepo[repo.GetName()]
 		if err != nil {
-			logger.Ctx(c).Log().Stack().Err(err).
+			logger.Ctx(c).Err(err).Stack().
 				Str("owner", owner).
 				Str("repo", repo.GetName()).
 				Msg("fail to get repo permanent branches")
+			c.JSON(
+				http.StatusInternalServerError,
+				http.StatusText(http.StatusInternalServerError),
+			)
+			return
+		}
+
+		branches, err := ghr.ghApp.ListBranches(c, owner, repo.GetName())
+		if err != nil {
+			logger.Ctx(c).Err(err).Stack().
+				Str("owner", owner).
+				Str("repo", repo.GetName()).
+				Msg("fail to get repo branches from github")
 			c.JSON(
 				http.StatusInternalServerError,
 				http.StatusText(http.StatusInternalServerError),
@@ -104,6 +117,7 @@ func (ghr *githubRouter) listReposForOwner(c *gin.Context) {
 			"isInstalled":      true,
 			"environmentCount": environmentCount,
 			"lastDeployedAt":   lastDeployedAt,
+			"branches":         branches,
 		})
 	}
 

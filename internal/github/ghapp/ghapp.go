@@ -43,6 +43,7 @@ type GHAppClient interface {
 		title, description string,
 	) (*github.PullRequest, error)
 	GetBranchSHA(ctx context.Context, owner, repo, branch string) (string, error)
+	ListBranches(ctx context.Context, owner, repo string) ([]string, error)
 	IsRepoPrivate(ctx context.Context, owner, repo string) (bool, error)
 }
 
@@ -430,6 +431,44 @@ func (c *ghAppClient) CreatePullRequest(
 	})
 
 	return pr, errors.Wrapf(err, "fail to create pull request for branch %s at repo %s/%s", branch, owner, repo)
+}
+
+func (c *ghAppClient) ListBranches(ctx context.Context, owner, repo string) ([]string, error) {
+	client, err := c.getOwnerInstallationClient(ctx, owner)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to get owner installation client")
+	}
+
+	opt := github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	}
+	var allBranches []string
+	for {
+		branches, res, err := client.Repositories.ListBranches(ctx, owner, repo, &github.BranchListOptions{
+			ListOptions: opt,
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "fail to list owner %s repositories", owner)
+		}
+
+		for _, branch := range branches {
+			allBranches = append(allBranches, branch.GetName())
+		}
+
+		if res.NextPage == 0 {
+			break
+		}
+
+		opt.Page = res.NextPage
+
+		if len(allBranches) >= 200 {
+			// TODO: log this situation, we might wanna know how often this occurs
+			break
+		}
+	}
+
+	return allBranches, nil
 }
 
 func (c *ghAppClient) GetBranchSHA(ctx context.Context, owner, repo, branch string) (string, error) {

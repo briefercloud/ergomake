@@ -2,25 +2,29 @@ package envvars
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"k8s.io/utils/pointer"
 
 	"github.com/ergomake/ergomake/internal/crypto"
 	"github.com/ergomake/ergomake/internal/database"
 )
 
 type EnvVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name   string  `json:"name"`
+	Value  string  `json:"value"`
+	Branch *string `json:"branch"`
 }
 
 type EnvVarsProvider interface {
-	Upsert(ctx context.Context, owner, repo, name, value string) error
-	Delete(ctx context.Context, owner, repo, name string) error
+	Upsert(ctx context.Context, owner, repo, name, value string, branch *string) error
+	Delete(ctx context.Context, owner, repo, name string, branch *string) error
 	ListByRepo(ctx context.Context, owner, repo string) ([]EnvVar, error)
+	ListByRepoBranch(ctx context.Context, owner, repo, branch string) ([]EnvVar, error)
 }
 
 type DBEnvVar struct {
@@ -31,6 +35,7 @@ type DBEnvVar struct {
 	Repo      string
 	Name      string
 	Value     string
+	Branch    sql.NullString
 }
 
 type dbEnvVarsProvider struct {
@@ -42,7 +47,7 @@ func NewDBEnvVarProvider(db *database.DB, secret string) *dbEnvVarsProvider {
 	return &dbEnvVarsProvider{db, secret}
 }
 
-func (evp *dbEnvVarsProvider) Upsert(ctx context.Context, owner, repo, name, value string) error {
+func (evp *dbEnvVarsProvider) Upsert(ctx context.Context, owner, repo, name, value string, branch *string) error {
 	encryptedValue, err := crypto.Encrypt(evp.secret, value)
 	if err != nil {
 		return errors.Wrap(err, "failed to encrypt value")
@@ -50,9 +55,10 @@ func (evp *dbEnvVarsProvider) Upsert(ctx context.Context, owner, repo, name, val
 
 	var dbVar DBEnvVar
 	err = evp.db.Table("env_vars").Where(map[string]interface{}{
-		"owner": owner,
-		"repo":  repo,
-		"name":  name,
+		"owner":  owner,
+		"repo":   repo,
+		"name":   name,
+		"branch": branch,
 	}).Assign(map[string]interface{}{
 		"value": encryptedValue,
 	}).FirstOrCreate(&dbVar).Error
@@ -60,12 +66,15 @@ func (evp *dbEnvVarsProvider) Upsert(ctx context.Context, owner, repo, name, val
 	return errors.Wrap(err, "failed to upsert env var")
 }
 
-func (evp *dbEnvVarsProvider) Delete(ctx context.Context, owner, repo, name string) error {
-	err := evp.db.Table("env_vars").Where(map[string]interface{}{
-		"owner": owner,
-		"repo":  repo,
-		"name":  name,
-	}).Delete(&DBEnvVar{}).Error
+func (evp *dbEnvVarsProvider) Delete(ctx context.Context, owner, repo, name string, branch *string) error {
+	err := evp.db.Table("env_vars").
+		Where(map[string]interface{}{
+			"owner":  owner,
+			"repo":   repo,
+			"name":   name,
+			"branch": branch,
+		}).
+		Delete(&DBEnvVar{}).Error
 
 	return err
 }
@@ -88,8 +97,42 @@ func (evp *dbEnvVarsProvider) ListByRepo(ctx context.Context, owner, repo string
 			return nil, errors.Wrapf(err, "fail to decrypt value of env var %s", v.ID)
 		}
 
-		vars = append(vars, EnvVar{v.Name, value})
+		var branch *string
+		if v.Branch.Valid {
+			branch = pointer.String(v.Branch.String)
+		}
+
+		vars = append(vars, EnvVar{v.Name, value, branch})
 	}
 
 	return vars, err
+}
+
+func (evp *dbEnvVarsProvider) ListByRepoBranch(ctx context.Context, owner, repo, branch string) ([]EnvVar, error) {
+	allRepoVars, err := evp.ListByRepo(ctx, owner, repo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "fail to list env vars for repo %s/%s", owner, repo)
+	}
+
+	vars := make(map[string]EnvVar)
+	for _, v := range allRepoVars {
+		if v.Branch != nil {
+			if *v.Branch == branch {
+				vars[v.Name] = v
+				continue
+			}
+		}
+
+		_, ok := vars[v.Name]
+		if !ok {
+			vars[v.Name] = v
+		}
+	}
+
+	result := make([]EnvVar, 0)
+	for _, v := range vars {
+		result = append(result, v)
+	}
+
+	return result, nil
 }

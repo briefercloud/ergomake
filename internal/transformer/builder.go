@@ -153,7 +153,7 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 			return nil, errors.Wrapf(err, "fail to create service account to build service %s", service.ID)
 		}
 
-		vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, repo)
+		vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, repo, branch)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to list env vars by repo")
 		}
@@ -271,7 +271,7 @@ func (c *gitCompose) buildImagesWithKaniko(ctx context.Context, namespace string
 			branch = defaultBranch
 		}
 
-		vars, err := c.envVarsProvider.ListByRepo(ctx, c.owner, repo)
+		vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, repo, branch)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to list env vars by repo")
 		}

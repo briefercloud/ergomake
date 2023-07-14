@@ -124,7 +124,7 @@ func TestGitCompose_Transform(t *testing.T) {
 				require.NoError(t, err)
 
 				envVarsProvider := envvarsMocks.NewEnvVarsProvider(t)
-				envVarsProvider.EXPECT().ListByRepo(mock.Anything, "owner", "repo").Return(nil, nil)
+				envVarsProvider.EXPECT().ListByRepoBranch(mock.Anything, "owner", "repo", "branch").Return(nil, nil)
 
 				privRegistryProvider := privregistryMock.NewPrivRegistryProvider(t)
 				privRegistryProvider.EXPECT().FetchCreds(mock.Anything, "owner", "mongo").Return(nil, privregistry.ErrRegistryNotFound)

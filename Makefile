@@ -25,7 +25,7 @@ e2e-test:
 	go test -v -race -timeout=15m ./e2e/...
 
 COVERPKG = ./internal/...
-.PHOHY: coverage
+.PHONY: coverage
 coverage:
 	go test -v -race -covermode=atomic -coverprofile cover.out -coverpkg $(COVERPKG) $(TESTS)
 

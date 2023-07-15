@@ -5,6 +5,7 @@ import * as R from 'ramda'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
+import EnvLink from '../components/EnvLink'
 import Layout from '../components/Layout'
 import Loading from '../components/Loading'
 import Select from '../components/Select'
@@ -191,12 +192,14 @@ function Environment({ profile }: Props) {
     },
   ]
 
+  const firstService = environment.services[0]
+
   return (
     <Layout profile={profile} pages={pages}>
       <header>
         {/* Heading */}
         <div className="flex flex-col items-start justify-between gap-x-8 gap-y-4 bg-white dark:bg-neutral-950 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:px-8">
-          <div>
+          <div className="flex-[2_2_0%]">
             <div className="flex items-center gap-x-3">
               <div
                 className={classNames(
@@ -220,6 +223,12 @@ function Environment({ profile }: Props) {
               Last deployed at{' '}
               {dfns.formatRelative(new Date(environment.createdAt), new Date())}
             </p>
+          </div>
+
+          <div className="flex-1">
+            <EnvLink
+              link={firstService?.url ? `https://${firstService.url}` : ''}
+            />
           </div>
         </div>
 
@@ -268,7 +277,7 @@ function Environment({ profile }: Props) {
               key={item.name}
               className={classNames(
                 item.logType === logType
-                  ? 'text-primary-400 dark:text-primary-200 shadow-inner shadow-gray-900 bg-gray-100 dark:bg-neutral-800'
+                  ? 'text-primary-400 dark:text-primary-200 shadow-inner dark:shadow-gray-900 bg-gray-100 dark:bg-neutral-800'
                   : 'text-gray-400',
                 'hover:bg-gray-100 dark:hover:bg-neutral-800 hover:cursor-pointer'
               )}

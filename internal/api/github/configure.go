@@ -36,33 +36,61 @@ func (ghr *githubRouter) configureRepo(c *gin.Context) {
 		return
 	}
 
-	ergopack := `apps:
+	composeFile := `version: '3'
+services:
   app:
-    path: ../
-    publicPort: 3000
+    # This example uses an image, but for your own application,
+    # you should use a Dockerfile. See the documentation for more information.
+    image: ergomake/ergomake-example
+    ports:
+      # The first port here will be the one our link points to.
+      - 3000:3000
+    env:
+      # Our application uses this environment variable to determine
+      # where to connect to the Redis instance.
+      REDIS_URL: "redis://redis:6379"
+
+  # You can add databases in a similar way.
+  # We use the service name as the hostname in the URL.
+  redis:
+    image: redis
+    ports:
+        # We don't want to expose this port, so we don't bind it to localhost.
+        - "6379"
 `
 	changes := map[string]string{
-		".ergomake/ergopack.yaml": ergopack,
+		".ergomake/docker-compose.yaml": composeFile,
 	}
 	title := "Introduce pull request previews"
 	description := `# Summary
 
-These changes introduce pull-request previews.
+These changes include a template for setting up pull request previews.
 
-After this change, [Ergomake](https://ergomake.dev) will create a preview environment whenever developers create a pull-request. Once the preview environment is up, Ergomake will post a link to access it.
+After you adjust this configuration file, [Ergomake](https://ergomake.dev) will create a preview environment whenever developers create a pull-request. Once the preview environment is up, Ergomake will post a link to access it.
 
 
 # How it works
 
-The ` + "`ergopack.yaml`" + ` file within ` + "`.ergomake`" + ` contains the configurations necessary to spin up an environment. Whenever this file exists in a pull-request, we'll use it to spin up a preview.
+The ` + "`docker-compose.yaml`" + ` file within ` + "`.ergomake`" + ` contains the configurations necessary to spin up an environment. Whenever this file exists in a pull-request, we'll use it to spin up a preview.
 
-If the file we've suggested doesn't work, feel free to push more code to this branch (` + "`ergomake`" + `). Once it works fine, you should have a working preview link.
+Please update this ` + "`docker-compose.yaml`" + `file by pushing more code to this branch (` + "`ergomake`" + `). Once it works fine, you should have a working preview link.
 
 Here are the most common actions you may need to take:
 
-1. Add environment variables by logging into [the dashboard](https://app.ergomake.dev) and selecting this repository.
-2. [Adding a database to which your software connects](LINK TO DOCS PENDING).
-3. [Add another repository upon which this application depends](LINK TO DOCS PENDING).
+1. Create a ` + "`Dockerfile`" + ` to build your application and add it to ` + "`docker-compose.yaml`" + `.
+2. Add any databases or other services your application depends on to ` + "`docker-compose.yaml`" + `.
+3. Add environment variables by logging into [the dashboard](https://app.ergomake.dev) and selecting this repository.
+
+For more information, please see our [documentation](https://docs.ergomake.dev/).
+
+
+## Tips for writing your compose file
+
+- You can see the build logs for your services in the [dashboard](https://app.ergomake.dev).
+- Make the first service your front-end application. This will be the service whose link comes first in our comment.
+- Expose your applications by binding their desired ports to ` + "`localhost`" + `. To expose port 3000, for example, you can use ` + "`3000:3000`" + `.
+- Avoid unnecessary complications, like using ` + "`depends_on`," + "`volumes`" + `, and ` + "`networks`" + `.
+- To seed your database, we recommend that you create a docker image with a seed. To learn how to do that, access Docker Hub and see the documentation there for the Mongo and Postgres images.
 
 
 # Where to go from here

@@ -133,8 +133,8 @@ function ConfigureRepoModal({ repo, onClose }: Props) {
                         {!state.pullRequestURL ? (
                           <p className="text-sm text-gray-500 dark:text-neutral-400">
                             Ergomake will automatically create a pull request
-                            with all the necessary configurations to deploy new
-                            environments.
+                            with an example configuration file that you can update
+                            to configure preview environments.
                           </p>
                         ) : (
                           <>

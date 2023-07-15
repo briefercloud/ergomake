@@ -137,7 +137,7 @@ func (es *esLogStreamer) Stream(
 				case <-ctx.Done():
 					return
 				default:
-					if isContainerAllowed(currentContainerName) {
+					if isContainerAllowed(currentContainerName) && len(entries) > 0 {
 						logChan <- entries
 					}
 				}

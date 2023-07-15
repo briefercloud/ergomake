@@ -845,6 +845,42 @@ func evaluateLabels(service *kobject.ServiceConfig, env *Environment) error {
 
 			service.BuildArgs[varName] = &replacedValue
 		}
+
+		replaceEnvLabel := "dev.ergomake.env.replace-env."
+		if strings.HasPrefix(label, replaceEnvLabel) {
+			envName := strings.TrimPrefix(label, replaceEnvLabel)
+			replacedValue, err := mustache.Render(value, templateContext)
+			if err != nil {
+				return errors.Wrapf(
+					err,
+					"fail to render mustache template for replace-env label env=%s value=%s",
+					envName,
+					value,
+				)
+			}
+
+			if service.Environment == nil {
+				service.Environment = make([]kobject.EnvVar, 0)
+			}
+
+			replaced := false
+			for i, env := range service.Environment {
+				if env.Name == envName {
+					env.Value = replacedValue
+					service.Environment[i] = env
+					replaced = true
+					break
+				}
+			}
+
+			if !replaced {
+				service.Environment = append(service.Environment, kobject.EnvVar{
+					Name:  envName,
+					Value: value,
+				})
+			}
+		}
+
 	}
 
 	return nil

@@ -45,7 +45,7 @@ services:
     ports:
       # The first port here will be the one our link points to.
       - 3000:3000
-    env:
+    environment:
       # Our application uses this environment variable to determine
       # where to connect to the Redis instance.
       REDIS_URL: "redis://redis:6379"

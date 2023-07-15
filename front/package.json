@@ -19,6 +19,7 @@
     "date-fns": "^2.30.0",
     "ramda": "^0.29.0",
     "react": "^18.2.0",
+    "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^8.0.7",
     "react-router-dom": "^6.11.2",
@@ -54,6 +55,7 @@
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/ramda": "^0.29.2",
+    "@types/react-copy-to-clipboard": "^5.0.4",
     "prettier": "^2.8.8",
     "tailwindcss": "^3.3.2"
   }

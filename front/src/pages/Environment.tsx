@@ -10,7 +10,7 @@ import Layout from '../components/Layout'
 import Loading from '../components/Loading'
 import Select from '../components/Select'
 import useBuildLogs from '../hooks/useBuildLogs'
-import { EnvironmentStatus, useEnvironment } from '../hooks/useEnvironment'
+import { Environment, useEnvironment } from '../hooks/useEnvironment'
 import {
   isError,
   isLoading,
@@ -43,8 +43,13 @@ type LogType = 'build' | 'live'
 
 const converter = new AnsiToHTML()
 
-function initialLogFromEnvStatus(status: EnvironmentStatus): LogType {
-  switch (status) {
+function initialLogFromEnv(env: Environment): LogType {
+  const hasBuild = env.services.some((s) => s.build !== '')
+  if (!hasBuild) {
+    return 'live'
+  }
+
+  switch (env.status) {
     case 'pending':
     case 'building':
     case 'degraded':
@@ -56,7 +61,7 @@ function initialLogFromEnvStatus(status: EnvironmentStatus): LogType {
   }
 }
 
-function Environment({ profile }: Props) {
+function EnvironmentPage({ profile }: Props) {
   const params = useParams()
   const ownersRes = useOwners()
   const owners = useMemo(() => orElse(ownersRes, []), [ownersRes])
@@ -85,7 +90,7 @@ function Environment({ profile }: Props) {
   const [logType, setLogsType] = useState<LogType | null>(null)
   useEffect(() => {
     if (isSuccess(environmentRes) && environmentRes.body && logType === null) {
-      setLogsType(initialLogFromEnvStatus(environmentRes.body.status))
+      setLogsType(initialLogFromEnv(environmentRes.body))
     }
   }, [environmentRes, logType, setLogsType])
 
@@ -99,18 +104,35 @@ function Environment({ profile }: Props) {
   void liveLogsErr
   void liveLogsRetry
 
-  const selectOptions = orElse(
+  const buildSelectOptions = orElse(
     map(
       environmentRes,
       (environment) =>
         environment?.services
-          .filter((s) => logType !== 'build' || s.build !== '')
+          .filter((s) => s.build !== '')
           .map((service, i) => ({
             label: service.name,
             value: i,
           })) ?? []
     ),
     []
+  )
+
+  const liveSelectOptions = orElse(
+    map(
+      environmentRes,
+      (environment) =>
+        environment?.services.map((service, i) => ({
+          label: service.name,
+          value: i,
+        })) ?? []
+    ),
+    []
+  )
+
+  const selectOptions = useMemo(
+    () => (logType === 'live' ? liveSelectOptions : buildSelectOptions),
+    [logType, liveSelectOptions, buildSelectOptions]
   )
 
   const [stateServiceIndex, setCurrentServiceIndex] = useState(0)
@@ -279,9 +301,21 @@ function Environment({ profile }: Props) {
                 item.logType === logType
                   ? 'text-primary-400 dark:text-primary-200 shadow-inner dark:shadow-gray-900 bg-gray-100 dark:bg-neutral-800'
                   : 'text-gray-400',
-                'hover:bg-gray-100 dark:hover:bg-neutral-800 hover:cursor-pointer'
+                {
+                  'hover:bg-gray-100 dark:hover:bg-neutral-800 hover:cursor-pointer':
+                    item.logType !== 'build' || buildSelectOptions.length > 0,
+                }
               )}
-              onClick={() => setLogsType(item.logType)}
+              onClick={() => {
+                const hasBuild = environment.services.some(
+                  (s) => s.build !== ''
+                )
+                if (!hasBuild && item.logType === 'build') {
+                  return
+                }
+
+                setLogsType(item.logType)
+              }}
             >
               {item.name}
             </li>
@@ -296,4 +330,4 @@ function Environment({ profile }: Props) {
   )
 }
 
-export default Environment
+export default EnvironmentPage

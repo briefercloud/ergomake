@@ -36,13 +36,30 @@ func (ghr *githubRouter) configureRepo(c *gin.Context) {
 		return
 	}
 
-	ergopack := `apps:
+	composeFile := `version: '3'
+services:
   app:
-    path: ../
-    publicPort: 3000
+    # This example uses an image, but for your own application,
+    # you should use a Dockerfile. See the documentation for more information.
+    image: ergomake/ergomake-example
+    ports:
+      # The first port here will be the one our link points to.
+      - 3000:3000
+    env:
+      # Our application uses this environment variable to determine
+      # where to connect to the Redis instance.
+      REDIS_URL: "redis://redis:6379"
+
+  # You can add databases in a similar way.
+  # We use the service name as the hostname in the URL.
+  redis:
+    image: redis
+    ports:
+        # We don't want to expose this port, so we don't bind it to localhost.
+        - "6379"
 `
 	changes := map[string]string{
-		".ergomake/ergopack.yaml": ergopack,
+		".ergomake/docker-compose.yaml": composeFile,
 	}
 	title := "Introduce pull request previews"
 	description := `# Summary
@@ -56,7 +73,7 @@ After you adjust this configuration file, [Ergomake](https://ergomake.dev) will 
 
 The ` + "`docker-compose.yaml`" + ` file within ` + "`.ergomake`" + ` contains the configurations necessary to spin up an environment. Whenever this file exists in a pull-request, we'll use it to spin up a preview.
 
-Please update this `+ "`docker-compose.yaml`" + `file by pushing more code to this branch (` + "`ergomake`" + `). Once it works fine, you should have a working preview link.
+Please update this ` + "`docker-compose.yaml`" + `file by pushing more code to this branch (` + "`ergomake`" + `). Once it works fine, you should have a working preview link.
 
 Here are the most common actions you may need to take:
 
@@ -73,7 +90,7 @@ For more information, please see our [documentation](https://docs.ergomake.dev/)
 - Make the first service your front-end application. This will be the service whose link comes first in our comment.
 - Expose your applications by binding their desired ports to ` + "`localhost`" + `. To expose port 3000, for example, you can use ` + "`3000:3000`" + `.
 - Avoid unnecessary complications, like using ` + "`depends_on`," + "`volumes`" + `, and ` + "`networks`" + `.
-- To seed your database, you can use a ` + "`command`" + ` to run a script after the database is up. For example, you can use ` + "`command: bash -c \"sleep 5 && npm run seed\"" + ` to seed a database after 5 seconds. Make sure that your seed command doesn't cause the container to crash if it fails.
+- To seed your database, we recommend that you create a docker image with a seed. To learn how to do that, access Docker Hub and see the documentation there for the Mongo and Postgres images.
 
 
 # Where to go from here

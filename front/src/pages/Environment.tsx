@@ -268,7 +268,7 @@ function Environment({ profile }: Props) {
               key={item.name}
               className={classNames(
                 item.logType === logType
-                  ? 'text-primary-400 dark:text-primary-200 shadow-inner shadow-gray-900 bg-gray-100 dark:bg-neutral-800'
+                  ? 'text-primary-400 dark:text-primary-200 shadow-inner dark:shadow-gray-900 bg-gray-100 dark:bg-neutral-800'
                   : 'text-gray-400',
                 'hover:bg-gray-100 dark:hover:bg-neutral-800 hover:cursor-pointer'
               )}

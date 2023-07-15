@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { useAuthError } from './useAuthError'
+
 export type HTTPError =
   | { _tag: 'authentication' }
   | { _tag: 'unexpected'; err: Error }
@@ -85,6 +87,7 @@ export type UseHTTPRequest<T> = [HTTPResponse<T>, () => void]
 export const useOptionalHTTPRequest = <T>(
   url: string
 ): UseHTTPRequest<T | null> => {
+  const [, setAuthError] = useAuthError()
   const [state, setState] = useState<HTTPResponse<T | null>>({
     _tag: 'loading',
   })
@@ -104,8 +107,8 @@ export const useOptionalHTTPRequest = <T>(
         }
 
         if (res.status === 401 || res.status === 403) {
+          setAuthError(true)
           setState({ _tag: 'error', err: { _tag: 'authentication' } })
-          localStorage.clear()
           return
         }
 
@@ -139,7 +142,7 @@ export const useOptionalHTTPRequest = <T>(
     return () => {
       abortController.abort()
     }
-  }, [url, state])
+  }, [url, state, setAuthError])
 
   useEffect(() => {
     setState({ _tag: 'loading' })
@@ -193,6 +196,7 @@ export type UseHTTPMutation<P, R = P> = [
 export const useHTTPMutation = <P, R = P>(
   url: string
 ): UseHTTPMutation<P, R> => {
+  const [, setAuthError] = useAuthError()
   const [state, setState] = useState<HTTPMutationResponse<R>>({
     _tag: 'pristine',
   })
@@ -214,7 +218,7 @@ export const useHTTPMutation = <P, R = P>(
         .then(async (res) => {
           if (res.status === 401 || res.status === 403) {
             setState({ _tag: 'error', err: { _tag: 'authentication' } })
-            localStorage.clear()
+            setAuthError(true)
             return
           }
 
@@ -229,7 +233,7 @@ export const useHTTPMutation = <P, R = P>(
           setState({ _tag: 'error', err: { _tag: 'unexpected', err } })
         })
     },
-    [url]
+    [url, setAuthError]
   )
 
   return useMemo(() => [state, makeRequest], [state, makeRequest])

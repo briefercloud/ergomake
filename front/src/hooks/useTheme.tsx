@@ -83,3 +83,11 @@ export const useThemeProvider = (): UseTheme => {
 }
 
 export const useTheme = () => useContext(ThemeContext)
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const themeValue = useThemeProvider()
+
+  return (
+    <ThemeContext.Provider value={themeValue}>{children}</ThemeContext.Provider>
+  )
+}

@@ -1,7 +1,8 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import { RequireAuth, RequireNoAuth } from './components/RequireAuth'
-import { ThemeContext, useThemeProvider } from './hooks/useTheme'
+import { AuthErrorProvider } from './hooks/useAuthError'
+import { ThemeProvider } from './hooks/useTheme'
 import Environment from './pages/Environment'
 import Environments from './pages/Environments'
 import Login from './pages/Login'
@@ -66,12 +67,12 @@ const router = createBrowserRouter([
 ])
 
 function App() {
-  const themeValue = useThemeProvider()
-
   return (
-    <ThemeContext.Provider value={themeValue}>
-      <RouterProvider router={router} />
-    </ThemeContext.Provider>
+    <ThemeProvider>
+      <AuthErrorProvider>
+        <RouterProvider router={router} />
+      </AuthErrorProvider>
+    </ThemeProvider>
   )
 }
 

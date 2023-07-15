@@ -9,10 +9,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import BillingAlert from '../components/BillingAlert'
 import Logo from '../components/Logo'
 import WebsitePath, { Pages } from '../components/WebsitePath'
+import { useAuthError } from '../hooks/useAuthError'
 import { orElse } from '../hooks/useHTTPRequest'
 import { Owner, useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { useTheme } from '../hooks/useTheme'
+import AuthAlert from './AuthAlert'
 
 const navigation = [
   { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
@@ -333,6 +335,7 @@ type LayoutProps = {
 }
 
 const Layout = ({ profile, children, pages }: LayoutProps) => {
+  const [authError] = useAuthError()
   const params = useParams<{ owner: string }>()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -362,9 +365,10 @@ const Layout = ({ profile, children, pages }: LayoutProps) => {
           />
 
           <main className="flex flex-col h-screen overflow-hidden">
-            {currentOwner && !currentOwner.isPaying && (
+            {!authError && currentOwner && !currentOwner.isPaying && (
               <BillingAlert owner={currentOwner.login} />
             )}
+            {authError && <AuthAlert />}
 
             {children}
           </main>

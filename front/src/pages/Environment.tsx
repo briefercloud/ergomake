@@ -1,6 +1,7 @@
 import AnsiToHTML from 'ansi-to-html'
 import classNames from 'classnames'
 import * as dfns from 'date-fns'
+import * as R from 'ramda'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
@@ -8,8 +9,14 @@ import Layout from '../components/Layout'
 import Loading from '../components/Loading'
 import Select from '../components/Select'
 import useBuildLogs from '../hooks/useBuildLogs'
-import { useEnvironment } from '../hooks/useEnvironment'
-import { isError, isLoading, orElse } from '../hooks/useHTTPRequest'
+import { EnvironmentStatus, useEnvironment } from '../hooks/useEnvironment'
+import {
+  isError,
+  isLoading,
+  isSuccess,
+  map,
+  orElse,
+} from '../hooks/useHTTPRequest'
 import useLiveLogs from '../hooks/useLiveLogs'
 import { useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
@@ -34,6 +41,19 @@ type Props = {
 type LogType = 'build' | 'live'
 
 const converter = new AnsiToHTML()
+
+function initialLogFromEnvStatus(status: EnvironmentStatus): LogType {
+  switch (status) {
+    case 'pending':
+    case 'building':
+    case 'degraded':
+      return 'build'
+    case 'success':
+    case 'limited':
+    case 'stale':
+      return 'live'
+  }
+}
 
 function Environment({ profile }: Props) {
   const params = useParams()
@@ -61,7 +81,12 @@ function Environment({ profile }: Props) {
     }
   }, [refetchEnv])
 
-  const [logType, setLogsType] = useState<LogType>('build')
+  const [logType, setLogsType] = useState<LogType | null>(null)
+  useEffect(() => {
+    if (isSuccess(environmentRes) && environmentRes.body && logType === null) {
+      setLogsType(initialLogFromEnvStatus(environmentRes.body.status))
+    }
+  }, [environmentRes, logType, setLogsType])
 
   const [buildLogs, buildLogsErr, buildLogsRetry] = useBuildLogs(
     params.env ?? ''
@@ -73,7 +98,42 @@ function Environment({ profile }: Props) {
   void liveLogsErr
   void liveLogsRetry
 
-  const [currentServiceIndex, setCurrentServiceIndex] = useState(0)
+  const selectOptions = orElse(
+    map(
+      environmentRes,
+      (environment) =>
+        environment?.services
+          .filter((s) => logType !== 'build' || s.build !== '')
+          .map((service, i) => ({
+            label: service.name,
+            value: i,
+          })) ?? []
+    ),
+    []
+  )
+
+  const [stateServiceIndex, setCurrentServiceIndex] = useState(0)
+  const currentServiceIndex = Math.min(
+    stateServiceIndex,
+    selectOptions.length - 1
+  )
+  const logs = useMemo(
+    () =>
+      orElse(
+        map(environmentRes, (env) => {
+          const serviceId = env?.services[currentServiceIndex]?.id
+          if (!serviceId) {
+            return []
+          }
+
+          const logs =
+            logType === 'live' ? liveLogs[serviceId] : buildLogs[serviceId]
+          return logs ?? []
+        }),
+        []
+      ),
+    [environmentRes, currentServiceIndex, logType, liveLogs, buildLogs]
+  )
 
   const loading = isLoading(ownersRes) || isLoading(environmentRes)
   if (loading) {
@@ -96,15 +156,14 @@ function Environment({ profile }: Props) {
     return <Navigate to="/" />
   }
 
-  const selectOptions = environment.services.map((service, i) => ({
-    label: service.name,
-    value: i,
-  }))
+  const selectedLogs = logs.map((log, i) => {
+    let html = log.message
+    try {
+      html = converter.toHtml(log.message)
+    } catch (err) {
+      void err
+    }
 
-  const logs = logType === 'build' ? buildLogs : liveLogs
-
-  const selectedLogs = (logs[currentService.id] ?? []).map((log, i) => {
-    const html = converter.toHtml(log.message)
     return (
       <pre
         key={i}
@@ -162,11 +221,6 @@ function Environment({ profile }: Props) {
               {dfns.formatRelative(new Date(environment.createdAt), new Date())}
             </p>
           </div>
-          {/*
-          <div className="order-first flex-none rounded-full bg-primary-400/10 px-2 py-1 text-xs font-medium text-primary-400 ring-1 ring-inset ring-primary-400/30 sm:order-none">
-            Production
-          </div>
-          */}
         </div>
 
         {/* Stats */}
@@ -203,7 +257,11 @@ function Environment({ profile }: Props) {
       <nav className="flex border-y border-gray-200 dark:border-neutral-800 border-b-0">
         <ul className="flex justify-between min-w-full flex-none text-sm font-semibold leading-6 text-gray-800 [&>li]:h-full [&>li]:flex [&>li]:grow [&>li]:items-center  [&>li]:justify-center items-center [&>li]:flex-1">
           <li className="bg-red">
-            <Select options={selectOptions} onChange={setCurrentServiceIndex} />
+            <Select
+              value={currentServiceIndex}
+              options={selectOptions}
+              onChange={setCurrentServiceIndex}
+            />
           </li>
           {secondaryNavigation.map((item) => (
             <li
@@ -222,8 +280,8 @@ function Environment({ profile }: Props) {
         </ul>
       </nav>
 
-      <div className="bg-gray-800 dark:bg-neutral-700 font-mono p-4 overflow-y-scroll overflow-x-scroll h-full">
-        {selectedLogs}
+      <div className="bg-gray-800 dark:bg-neutral-700 font-mono p-4 overflow-auto h-full flex flex-col-reverse scrollbar-hide">
+        {R.reverse(selectedLogs)}
       </div>
     </Layout>
   )

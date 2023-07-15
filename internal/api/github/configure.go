@@ -47,22 +47,33 @@ func (ghr *githubRouter) configureRepo(c *gin.Context) {
 	title := "Introduce pull request previews"
 	description := `# Summary
 
-These changes introduce pull-request previews.
+These changes include a template for setting up pull request previews.
 
-After this change, [Ergomake](https://ergomake.dev) will create a preview environment whenever developers create a pull-request. Once the preview environment is up, Ergomake will post a link to access it.
+After you adjust this configuration file, [Ergomake](https://ergomake.dev) will create a preview environment whenever developers create a pull-request. Once the preview environment is up, Ergomake will post a link to access it.
 
 
 # How it works
 
-The ` + "`ergopack.yaml`" + ` file within ` + "`.ergomake`" + ` contains the configurations necessary to spin up an environment. Whenever this file exists in a pull-request, we'll use it to spin up a preview.
+The ` + "`docker-compose.yaml`" + ` file within ` + "`.ergomake`" + ` contains the configurations necessary to spin up an environment. Whenever this file exists in a pull-request, we'll use it to spin up a preview.
 
-If the file we've suggested doesn't work, feel free to push more code to this branch (` + "`ergomake`" + `). Once it works fine, you should have a working preview link.
+Please update this `+ "`docker-compose.yaml`" + `file by pushing more code to this branch (` + "`ergomake`" + `). Once it works fine, you should have a working preview link.
 
 Here are the most common actions you may need to take:
 
-1. Add environment variables by logging into [the dashboard](https://app.ergomake.dev) and selecting this repository.
-2. [Adding a database to which your software connects](LINK TO DOCS PENDING).
-3. [Add another repository upon which this application depends](LINK TO DOCS PENDING).
+1. Create a ` + "`Dockerfile`" + ` to build your application and add it to ` + "`docker-compose.yaml`" + `.
+2. Add any databases or other services your application depends on to ` + "`docker-compose.yaml`" + `.
+3. Add environment variables by logging into [the dashboard](https://app.ergomake.dev) and selecting this repository.
+
+For more information, please see our [documentation](https://docs.ergomake.dev/).
+
+
+## Tips for writing your compose file
+
+- You can see the build logs for your services in the [dashboard](https://app.ergomake.dev).
+- Make the first service your front-end application. This will be the service whose link comes first in our comment.
+- Expose your applications by binding their desired ports to ` + "`localhost`" + `. To expose port 3000, for example, you can use ` + "`3000:3000`" + `.
+- Avoid unnecessary complications, like using ` + "`depends_on`," + "`volumes`" + `, and ` + "`networks`" + `.
+- To seed your database, you can use a ` + "`command`" + ` to run a script after the database is up. For example, you can use ` + "`command: bash -c \"sleep 5 && npm run seed\"" + ` to seed a database after 5 seconds. Make sure that your seed command doesn't cause the container to crash if it fails.
 
 
 # Where to go from here

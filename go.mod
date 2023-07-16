@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/aws/aws-sdk-go v1.44.294
 	github.com/bradleyfalzon/ghinstallation/v2 v2.5.0
+	github.com/briandowns/spinner v1.23.0
 	github.com/cbroglie/mustache v1.4.0
 	github.com/die-net/lrucache v0.0.0-20220628165024-20a71bc65bf1
 	github.com/elastic/go-elasticsearch/v8 v8.8.1
@@ -39,7 +40,7 @@ require (
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/Masterminds/semver/v3 v3.2.0 // indirect
+	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8 // indirect
 	github.com/ajg/form v1.5.1 // indirect

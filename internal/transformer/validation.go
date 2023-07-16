@@ -38,30 +38,44 @@ func (v *ProjectValidationErrorInvalidCompose) Serialize() json.RawMessage {
 	return r
 }
 
-func (c *gitCompose) validateProject() (*ProjectValidationError, error) {
-	ergopackPath, err := findErgopackPath(c.projectPath)
+type ProjectValidationResult struct {
+	ProjectValidationError *ProjectValidationError
+	IsCompose              bool
+	ConfigFilePath         string
+}
+
+func Validate(projectPath string) (*ProjectValidationResult, error) {
+	ergopackPath, err := findErgopackPath(projectPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to find ergopack path")
 	}
 
 	if ergopackPath != "" {
-		c.configFilePath = ergopackPath
-		return validateErgopack(c.projectPath, ergopackPath)
+		vErr, err := validateErgopack(projectPath, ergopackPath)
+		return &ProjectValidationResult{
+			ProjectValidationError: vErr,
+			IsCompose:              false,
+			ConfigFilePath:         ergopackPath,
+		}, err
 	}
 
-	composePath, err := findComposePath(c.projectPath)
+	composePath, err := findComposePath(projectPath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "fail to find compose at %s", c.projectPath)
+		return nil, errors.Wrapf(err, "fail to find compose at %s", projectPath)
 	}
 
 	if composePath == "" {
-		return &projectValidationErrorComposeNotFound, nil
+		return &ProjectValidationResult{
+			ProjectValidationError: &projectValidationErrorComposeNotFound,
+		}, nil
 	}
 
-	c.configFilePath = composePath
-	c.isCompose = true
-
-	return validateCompose(c.projectPath, composePath)
+	vErr, err := validateCompose(projectPath, composePath)
+	return &ProjectValidationResult{
+		ProjectValidationError: vErr,
+		IsCompose:              true,
+		ConfigFilePath:         composePath,
+	}, err
 }
 
 var ergopackPaths = []string{

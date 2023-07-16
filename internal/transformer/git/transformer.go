@@ -1,4 +1,4 @@
-package transformer
+package git
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
@@ -38,24 +37,16 @@ import (
 	"github.com/ergomake/ergomake/internal/git"
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/privregistry"
+	"github.com/ergomake/ergomake/internal/transformer"
+	"github.com/ergomake/ergomake/internal/transformer/builder"
 )
 
 var clusterDomain string
 var userlandRegistry string
-var insecureRegistry string
 
 func init() {
-	setInsecureRegistry()
 	setUserlandRegistry()
 	setDomain()
-}
-
-func setInsecureRegistry() {
-	cluster := os.Getenv("CLUSTER")
-	if cluster != "eks" {
-		insecureRegistry = "host.minikube.internal:5001"
-		return
-	}
 }
 
 func setUserlandRegistry() {
@@ -85,31 +76,26 @@ func setDomain() {
 }
 
 type gitCompose struct {
-	clusterClient        cluster.Client
-	gitClient            git.RemoteGitClient
-	db                   *database.DB
-	envVarsProvider      envvars.EnvVarsProvider
-	privRegistryProvider privregistry.PrivRegistryProvider
+	clusterClient           cluster.Client
+	gitClient               git.RemoteGitClient
+	db                      *database.DB
+	envVarsProvider         envvars.EnvVarsProvider
+	privRegistryProvider    privregistry.PrivRegistryProvider
+	dockerhubPullSecretName string
+	s3Bucket                string
+	awsAccessKey            string
+	awsSecretAccessKey      string
+	gitOptions              builder.GitOptions
 
-	owner       string
-	branchOwner string
-	repo        string
-	branch      string
-	sha         string
-	prNumber    *int
-	author      string
-	isPublic    bool
+	prepared bool
 
 	projectPath    string
 	configFilePath string
 	dbEnvironment  *database.Environment
-	environment    *Environment
+	environment    *transformer.Environment
 	isCompose      bool
 	komposeObject  *kobject.KomposeObject
 	cleanup        func()
-
-	prepared                bool
-	dockerhubPullSecretName string
 }
 
 func NewGitCompose(
@@ -118,14 +104,10 @@ func NewGitCompose(
 	db *database.DB,
 	envVarsProvider envvars.EnvVarsProvider,
 	privRegistryProvider privregistry.PrivRegistryProvider,
-	owner string,
-	branchOwner string,
-	repo string,
-	branch string,
-	sha string,
-	prNumber *int,
-	author string,
-	isPublic bool,
+	s3Bucket string,
+	awsAccessKey string,
+	awsSecretAccessKey string,
+	gitOptions builder.GitOptions,
 	dockerhubPullSecretName string,
 ) *gitCompose {
 	return &gitCompose{
@@ -134,45 +116,24 @@ func NewGitCompose(
 		db:                      db,
 		envVarsProvider:         envVarsProvider,
 		privRegistryProvider:    privRegistryProvider,
-		owner:                   owner,
-		branchOwner:             branchOwner,
-		repo:                    repo,
-		branch:                  branch,
-		sha:                     sha,
-		prNumber:                prNumber,
-		author:                  author,
-		isPublic:                isPublic,
+		s3Bucket:                s3Bucket,
+		awsAccessKey:            awsAccessKey,
+		awsSecretAccessKey:      awsSecretAccessKey,
+		gitOptions:              gitOptions,
 		dockerhubPullSecretName: dockerhubPullSecretName,
 	}
 }
 
-type TransformResult struct {
-	ClusterEnv  *cluster.ClusterEnv
-	Environment *Environment
-	FailedJobs  []*batchv1.Job
-	IsCompose   bool
-}
-
-func (tr *TransformResult) Failed() bool {
-	return len(tr.FailedJobs) > 0
-}
-
-type PrepareResult struct {
-	Environment     *database.Environment
-	Skip            bool
-	ValidationError *ProjectValidationError
-}
-
-func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult, error) {
+func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*transformer.PrepareResult, error) {
 	namespace := id.String()
 	dbEnv := database.NewEnvironment(
 		id,
-		c.owner,
-		c.branchOwner,
-		c.repo,
-		c.branch,
-		c.prNumber,
-		c.author,
+		c.gitOptions.Owner,
+		c.gitOptions.BranchOwner,
+		c.gitOptions.Repo,
+		c.gitOptions.Branch,
+		c.gitOptions.PrNumber,
+		c.gitOptions.Author,
 		database.EnvPending,
 	)
 	err := c.db.Create(&dbEnv).Error
@@ -208,14 +169,14 @@ func (c *gitCompose) Prepare(ctx context.Context, id uuid.UUID) (*PrepareResult,
 			return nil, errors.Wrap(err, "fail to save degraded reason to db")
 		}
 
-		return &PrepareResult{
+		return &transformer.PrepareResult{
 			Environment:     dbEnv,
 			Skip:            false,
 			ValidationError: loadErgopackResult.ValidationError,
 		}, nil
 	}
 
-	return &PrepareResult{
+	return &transformer.PrepareResult{
 		Environment: dbEnv,
 		Skip:        loadErgopackResult.Skip,
 	}, nil
@@ -236,20 +197,36 @@ func (c *gitCompose) fail(origErr error) error {
 	return origErr
 }
 
-func (c *gitCompose) Transform(ctx context.Context, id uuid.UUID) (*TransformResult, error) {
+func (c *gitCompose) Transform(ctx context.Context, id uuid.UUID) (*transformer.TransformResult, error) {
 	if !c.prepared {
 		return nil, errors.New("called Transform before calling Prepare")
 	}
 
 	namespace := id.String()
-	result := &TransformResult{IsCompose: c.isCompose}
+	result := &transformer.TransformResult{IsCompose: c.isCompose}
 
 	err := c.saveServices(ctx, id, c.environment)
 	if err != nil {
 		return nil, c.fail(errors.Wrap(err, "fail to save services"))
 	}
 
-	buildImagesRes, err := c.buildImages(ctx, namespace)
+	builder := builder.NewBuilder(
+		c.clusterClient,
+		c.gitClient,
+		c.envVarsProvider,
+		c.db,
+		c.s3Bucket,
+		c.awsAccessKey,
+		c.awsSecretAccessKey,
+		c.projectPath,
+		c.configFilePath,
+		c.dbEnvironment,
+		c.isCompose,
+		c.komposeObject,
+		c.environment,
+		c.dockerhubPullSecretName,
+	)
+	buildImagesRes, err := builder.BuildImagesFromGit(ctx, namespace, c.gitOptions)
 	if err != nil {
 		return nil, c.fail(errors.Wrap(err, "fail to build images"))
 	}
@@ -289,7 +266,7 @@ func (c *gitCompose) Transform(ctx context.Context, id uuid.UUID) (*TransformRes
 }
 
 func (c *gitCompose) makeClusterObjects(ctx context.Context, namespace string) ([]runtime.Object, error) {
-	vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, c.repo, c.branch)
+	vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.gitOptions.Owner, c.gitOptions.Repo, c.gitOptions.Branch)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to list env vars by repo")
 	}
@@ -503,7 +480,7 @@ func (c *gitCompose) makeClusterObjects(ctx context.Context, namespace string) (
 	return objs, nil
 }
 
-func (c *gitCompose) saveServices(ctx context.Context, envID uuid.UUID, compose *Environment) error {
+func (c *gitCompose) saveServices(ctx context.Context, envID uuid.UUID, compose *transformer.Environment) error {
 	var services []database.Service
 	for name, service := range compose.Services {
 		buildStatus := "image"
@@ -535,17 +512,17 @@ func (c *gitCompose) saveServices(ctx context.Context, envID uuid.UUID, compose 
 // returns empty when service should not be exposed
 func (c *gitCompose) getUrl(service kobject.ServiceConfig) string {
 	for _, port := range service.Port {
-		suffix := c.branch
-		if c.prNumber != nil {
-			suffix = strconv.Itoa(*c.prNumber)
+		suffix := c.gitOptions.Branch
+		if c.gitOptions.PrNumber != nil {
+			suffix = strconv.Itoa(*c.gitOptions.PrNumber)
 		}
 
 		if port.HostPort > 0 {
 			return strings.ToLower(fmt.Sprintf(
 				"%s-%s-%s-%s.%s",
 				service.Name,
-				c.owner,
-				strings.ReplaceAll(c.repo, "_", ""),
+				c.gitOptions.Owner,
+				strings.ReplaceAll(c.gitOptions.Repo, "_", ""),
 				suffix,
 				clusterDomain,
 			))
@@ -599,7 +576,7 @@ func (c *gitCompose) removeUnsupportedVolumes(service *kobject.ServiceConfig) {
 
 type LoadErgopackResult struct {
 	Skip            bool
-	ValidationError *ProjectValidationError
+	ValidationError *transformer.ProjectValidationError
 }
 
 func (c *gitCompose) loadErgopack(ctx context.Context, namespace string) (*LoadErgopackResult, error) {
@@ -627,14 +604,17 @@ func (c *gitCompose) loadErgopack(ctx context.Context, namespace string) (*LoadE
 		return &LoadErgopackResult{Skip: true}, errors.Wrap(err, "fail to check if .ergomake folder exists")
 	}
 
-	validationErr, err := c.validateProject()
+	validationRes, err := transformer.Validate(projectPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to validate project")
 	}
 
-	if validationErr != nil {
-		return &LoadErgopackResult{Skip: false, ValidationError: validationErr}, nil
+	if validationRes.ProjectValidationError != nil {
+		return &LoadErgopackResult{Skip: false, ValidationError: validationRes.ProjectValidationError}, nil
 	}
+
+	c.configFilePath = validationRes.ConfigFilePath
+	c.isCompose = validationRes.IsCompose
 
 	if c.isCompose {
 		c.dbEnvironment.BuildTool = "kaniko"
@@ -685,7 +665,7 @@ func (c *gitCompose) loadErgopack(ctx context.Context, namespace string) (*LoadE
 
 			return &LoadErgopackResult{
 				Skip: false,
-				ValidationError: &ProjectValidationError{
+				ValidationError: &transformer.ProjectValidationError{
 					T:       "invalid-ergopack",
 					Message: fmt.Sprintf("Ergopack file has syntax error\n```\n%s: %s\n```", relativePath, err.Error()),
 				},
@@ -727,27 +707,27 @@ func (c *gitCompose) transformCompose(ctx context.Context, namespace string) ([]
 }
 
 func (c *gitCompose) cloneRepo(ctx context.Context, namespace string) (string, error) {
-	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("ergomake-%s-%s-%s", c.owner, c.repo, namespace))
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("ergomake-%s-%s-%s", c.gitOptions.Owner, c.gitOptions.Repo, namespace))
 	if err != nil {
 		return "", errors.Wrap(err, "fail to make temp dir")
 	}
 
 	// it is important that the folder name is not too big that's why we create yet another dir
-	dir := path.Join(tmpDir, c.repo)
+	dir := path.Join(tmpDir, c.gitOptions.Repo)
 	err = os.Mkdir(dir, 0700)
 	if err != nil {
 		return "", errors.Wrap(err, "fail to make inner dir inside temp dir")
 	}
 
-	err = c.gitClient.CloneRepo(ctx, c.branchOwner, c.repo, c.branch, dir, c.isPublic)
+	err = c.gitClient.CloneRepo(ctx, c.gitOptions.BranchOwner, c.gitOptions.Repo, c.gitOptions.Branch, dir, c.gitOptions.IsPublic)
 
 	return dir, errors.Wrap(err, "fail to clone from github")
 }
 
-func (c *gitCompose) makeEnvironmentFromKObjectServices(komposeServices map[string]kobject.ServiceConfig, rawCompose string) *Environment {
-	services := map[string]EnvironmentService{}
+func (c *gitCompose) makeEnvironmentFromKObjectServices(komposeServices map[string]kobject.ServiceConfig, rawCompose string) *transformer.Environment {
+	services := map[string]transformer.EnvironmentService{}
 	for _, service := range komposeServices {
-		services[service.Name] = EnvironmentService{
+		services[service.Name] = transformer.EnvironmentService{
 			ID:    uuid.NewString(),
 			Url:   c.getUrl(service),
 			Image: service.Image,
@@ -755,25 +735,25 @@ func (c *gitCompose) makeEnvironmentFromKObjectServices(komposeServices map[stri
 		}
 	}
 
-	return NewEnvironment(services, rawCompose)
+	return transformer.NewEnvironment(services, rawCompose)
 }
 
-func (c *gitCompose) makeEnvironmentFromErgopack(ctx context.Context, pack *ergopack.Ergopack, rawFile string) *Environment {
-	services := map[string]EnvironmentService{}
+func (c *gitCompose) makeEnvironmentFromErgopack(ctx context.Context, pack *ergopack.Ergopack, rawFile string) *transformer.Environment {
+	services := map[string]transformer.EnvironmentService{}
 	i := 0
 	for name, service := range pack.Apps {
 		url := ""
 		if service.PublicPort != "" {
-			suffix := c.branch
-			if c.prNumber != nil {
-				suffix = strconv.Itoa(*c.prNumber)
+			suffix := c.gitOptions.Branch
+			if c.gitOptions.PrNumber != nil {
+				suffix = strconv.Itoa(*c.gitOptions.PrNumber)
 			}
 
 			url = strings.ToLower(fmt.Sprintf(
 				"%s-%s-%s-%s.%s",
 				name,
-				c.owner,
-				strings.ReplaceAll(c.repo, "_", ""),
+				c.gitOptions.Owner,
+				strings.ReplaceAll(c.gitOptions.Repo, "_", ""),
 				suffix,
 				clusterDomain,
 			))
@@ -782,10 +762,10 @@ func (c *gitCompose) makeEnvironmentFromErgopack(ctx context.Context, pack *ergo
 		id := uuid.NewString()
 		image := service.Image
 		if image == "" {
-			image = strings.ToLower(fmt.Sprintf("ergomake/%s-%s-%s:%s", c.owner, c.repo, name, id))
+			image = strings.ToLower(fmt.Sprintf("ergomake/%s-%s-%s:%s", c.gitOptions.Owner, c.gitOptions.Repo, name, id))
 		}
 
-		services[name] = EnvironmentService{
+		services[name] = transformer.EnvironmentService{
 			ID:            id,
 			Url:           url,
 			Image:         image,
@@ -798,7 +778,7 @@ func (c *gitCompose) makeEnvironmentFromErgopack(ctx context.Context, pack *ergo
 		i += 1
 	}
 
-	env := NewEnvironment(services, rawFile)
+	env := transformer.NewEnvironment(services, rawFile)
 
 	mustache.AllowMissingVariables = false
 	templateContext := env.ToMap()
@@ -819,7 +799,7 @@ func (c *gitCompose) makeEnvironmentFromErgopack(ctx context.Context, pack *ergo
 	return env
 }
 
-func evaluateLabels(service *kobject.ServiceConfig, env *Environment) error {
+func evaluateLabels(service *kobject.ServiceConfig, env *transformer.Environment) error {
 	mustache.AllowMissingVariables = false
 
 	templateContext := env.ToMap()
@@ -976,15 +956,15 @@ func (c *gitCompose) removeHostPort(deployment *appsv1.Deployment) {
 func (c *gitCompose) addLabels(deployment *appsv1.Deployment) {
 	serviceName := deployment.GetLabels()["io.kompose.service"]
 	service := c.environment.Services[serviceName]
-	repo, _ := c.computeRepoAndBuildPath(service.Build, c.repo)
+	repo, _ := builder.ComputeRepoAndBuildPath(c.projectPath, c.configFilePath, service.Build, c.gitOptions.Repo)
 
 	labels := map[string]string{
 		"app":                          service.ID,
 		"preview.ergomake.dev/id":      service.ID,
 		"preview.ergomake.dev/service": serviceName,
-		"preview.ergomake.dev/owner":   c.owner,
+		"preview.ergomake.dev/owner":   c.gitOptions.Owner,
 		"preview.ergomake.dev/repo":    repo,
-		"preview.ergomake.dev/sha":     c.sha,
+		"preview.ergomake.dev/sha":     c.gitOptions.SHA,
 	}
 
 	mergedDeploymentLabels := deployment.GetObjectMeta().GetLabels()
@@ -1014,9 +994,9 @@ func (c *gitCompose) addLabels(deployment *appsv1.Deployment) {
 
 func (c *gitCompose) addEnvVars(ctx context.Context, deployment *appsv1.Deployment) (*corev1.Secret, error) {
 	service := c.environment.Services[deployment.GetLabels()["io.kompose.service"]]
-	repo, _ := c.computeRepoAndBuildPath(service.Build, c.repo)
+	repo, _ := builder.ComputeRepoAndBuildPath(c.projectPath, c.configFilePath, service.Build, c.gitOptions.Repo)
 
-	vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, repo, c.branch)
+	vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.gitOptions.Owner, repo, c.gitOptions.Branch)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to list env vars by repo")
 	}
@@ -1069,7 +1049,7 @@ func (c *gitCompose) getSecretForImage(
 		return nil, nil
 	}
 
-	creds, err := c.privRegistryProvider.FetchCreds(ctx, c.owner, image)
+	creds, err := c.privRegistryProvider.FetchCreds(ctx, c.gitOptions.Owner, image)
 	if errors.Is(err, privregistry.ErrRegistryNotFound) {
 		return nil, nil
 	}
@@ -1102,4 +1082,16 @@ func (c *gitCompose) getSecretForImage(
 	runtimeSecret := runtime.Object(secret)
 
 	return runtimeSecret, nil
+}
+
+func (c *gitCompose) getLabels(serviceID, serviceName string) map[string]string {
+	return map[string]string{
+		"app":                              serviceID,
+		"preview.ergomake.dev/id":          serviceID,
+		"preview.ergomake.dev/service":     serviceName,
+		"preview.ergomake.dev/owner":       c.gitOptions.Owner,
+		"preview.ergomake.dev/branchOwner": c.gitOptions.BranchOwner,
+		"preview.ergomake.dev/repo":        c.gitOptions.Repo,
+		"preview.ergomake.dev/sha":         c.gitOptions.SHA,
+	}
 }

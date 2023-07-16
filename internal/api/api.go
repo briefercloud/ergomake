@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ergomake/ergomake/internal/api/auth"
+	"github.com/ergomake/ergomake/internal/api/deploy"
 	environmentsApi "github.com/ergomake/ergomake/internal/api/environments"
 	"github.com/ergomake/ergomake/internal/api/github"
 	permanentbranchesApi "github.com/ergomake/ergomake/internal/api/permanentbranches"
@@ -53,6 +54,9 @@ type Config struct {
 	Friends                         []string `split_words:"true"`
 	BestFriends                     []string `split_words:"true"`
 	DockerhubPullSecretName         string   `split_words:"true"`
+	S3Bucket                        string   `split_words:"true"`
+	AWSAccessKeyID                  string   `split_words:"true"`
+	AWSSecretAccessKey              string   `split_words:"true"`
 }
 
 type server struct {
@@ -151,6 +155,20 @@ func NewServer(
 		environmentsProvider,
 	)
 	permanentbranchesRouter.AddRoutes(v2)
+
+	deployRouter := deploy.NewDeployRouter(
+		db,
+		ghApp,
+		clusterClient,
+		envVarsProvider,
+		privRegistryProvider,
+		environmentsProvider,
+		cfg.S3Bucket,
+		cfg.AWSAccessKeyID,
+		cfg.AWSSecretAccessKey,
+		cfg.DockerhubPullSecretName,
+	)
+	deployRouter.AddRoutes(v2)
 
 	return &server{router}
 }

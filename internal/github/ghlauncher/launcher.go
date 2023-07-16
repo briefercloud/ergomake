@@ -18,6 +18,8 @@ import (
 	"github.com/ergomake/ergomake/internal/logger"
 	"github.com/ergomake/ergomake/internal/privregistry"
 	"github.com/ergomake/ergomake/internal/transformer"
+	"github.com/ergomake/ergomake/internal/transformer/builder"
+	gittransformer "github.com/ergomake/ergomake/internal/transformer/git"
 )
 
 type LaunchEnvironmentRequest struct {
@@ -41,6 +43,9 @@ type ghLauncher struct {
 	envVarsProvider         envvars.EnvVarsProvider
 	privRegistryProvider    privregistry.PrivRegistryProvider
 	environmentsProvider    environments.EnvironmentsProvider
+	s3Bucket                string
+	awsAccessKey            string
+	awsSecretAccessKey      string
 	dockerhubPullSecretName string
 	frontendURL             string
 }
@@ -52,6 +57,9 @@ func NewGHLauncher(
 	envVarsProvider envvars.EnvVarsProvider,
 	privRegistryProvider privregistry.PrivRegistryProvider,
 	environmentsProvider environments.EnvironmentsProvider,
+	s3Bucket string,
+	awsAccessKey string,
+	awsSecretAccessKey string,
 	dockerhubPullSecretName string,
 	frontendURL string,
 ) *ghLauncher {
@@ -62,6 +70,9 @@ func NewGHLauncher(
 		envVarsProvider,
 		privRegistryProvider,
 		environmentsProvider,
+		s3Bucket,
+		awsAccessKey,
+		awsSecretAccessKey,
 		dockerhubPullSecretName,
 		frontendURL,
 	}
@@ -110,20 +121,26 @@ func (gh *ghLauncher) LaunchEnvironment(ctx context.Context, req LaunchEnvironme
 
 	uid := uuid.New()
 
-	t := transformer.NewGitCompose(
+	gitOptions := builder.GitOptions{
+		Owner:       req.Owner,
+		BranchOwner: req.BranchOwner,
+		Repo:        req.Repo,
+		Branch:      req.Branch,
+		SHA:         req.SHA,
+		PrNumber:    req.PrNumber,
+		Author:      req.Author,
+		IsPublic:    !req.IsPrivate,
+	}
+	t := gittransformer.NewGitCompose(
 		gh.clusterClient,
 		gh.ghApp,
 		gh.db,
 		gh.envVarsProvider,
 		gh.privRegistryProvider,
-		req.Owner,
-		req.BranchOwner,
-		req.Repo,
-		req.Branch,
-		req.SHA,
-		req.PrNumber,
-		req.Author,
-		!req.IsPrivate,
+		gh.s3Bucket,
+		gh.awsAccessKey,
+		gh.awsSecretAccessKey,
+		gitOptions,
 		gh.dockerhubPullSecretName,
 	)
 	defer t.Cleanup()

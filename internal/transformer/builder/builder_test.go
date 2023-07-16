@@ -1,4 +1,4 @@
-package transformer
+package builder
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGitCompose_computeRepoAndBuildPath(t *testing.T) {
+func TestBuilder_ComputeRepoAndBuildPath(t *testing.T) {
 	testCases := []struct {
 		name        string
 		projectPath string
@@ -70,12 +70,7 @@ func TestGitCompose_computeRepoAndBuildPath(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := &gitCompose{
-				projectPath:    tc.projectPath,
-				configFilePath: tc.composePath,
-			}
-
-			repo, buildPath := c.computeRepoAndBuildPath(tc.buildPath, tc.defaultRepo)
+			repo, buildPath := ComputeRepoAndBuildPath(tc.projectPath, tc.composePath, tc.buildPath, tc.defaultRepo)
 			assert.Equal(t, tc.want[0], repo)
 			assert.Equal(t, tc.want[1], buildPath)
 		})

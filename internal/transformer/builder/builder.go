@@ -1,4 +1,4 @@
-package transformer
+package builder
 
 import (
 	"context"
@@ -17,12 +17,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/ergomake/ergomake/internal/cluster"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/envvars"
+	"github.com/ergomake/ergomake/internal/git"
+	"github.com/ergomake/ergomake/internal/transformer"
 
 	kpackBuild "github.com/pivotal/kpack/pkg/apis/build/v1alpha2"
 	kpackCore "github.com/pivotal/kpack/pkg/apis/core/v1alpha1"
 )
+
+var insecureRegistry string
+
+func init() {
+	cluster := os.Getenv("CLUSTER")
+	if cluster != "eks" {
+		insecureRegistry = "host.minikube.internal:5001"
+		return
+	}
+}
 
 type BuildImagesResult struct {
 	FailedJobs []*batchv1.Job
@@ -32,9 +45,72 @@ func (bir *BuildImagesResult) Failed() bool {
 	return len(bir.FailedJobs) > 0
 }
 
-func (c *gitCompose) computeRepoAndBuildPath(buildPath string, defaultRepo string) (string, string) {
-	projectPath := filepath.Clean(c.projectPath)
-	fullBuildPath := filepath.Clean(path.Join(path.Dir(c.configFilePath), buildPath))
+type GitOptions struct {
+	Owner       string
+	BranchOwner string
+	Repo        string
+	Branch      string
+	SHA         string
+	PrNumber    *int
+	Author      string
+	IsPublic    bool
+}
+
+type builder struct {
+	clusterClient      cluster.Client
+	gitClient          git.RemoteGitClient
+	envVarsProvider    envvars.EnvVarsProvider
+	db                 *database.DB
+	s3Bucket           string
+	awsAccessKey       string
+	awsSecretAccessKey string
+
+	projectPath             string
+	configFilePath          string
+	dbEnvironment           *database.Environment
+	isCompose               bool
+	komposeObject           *kobject.KomposeObject
+	environment             *transformer.Environment
+	dockerhubPullSecretName string
+}
+
+func NewBuilder(
+	clusterClient cluster.Client,
+	gitClient git.RemoteGitClient,
+	envVarsProvider envvars.EnvVarsProvider,
+	db *database.DB,
+	s3Bucket string,
+	awsAccessKey string,
+	awsSecretAccessKey string,
+	projectPath string,
+	configFilePath string,
+	dbEnvironment *database.Environment,
+	isCompose bool,
+	komposeObject *kobject.KomposeObject,
+	environment *transformer.Environment,
+	dockerhubPullSecretName string,
+) *builder {
+	return &builder{
+		clusterClient,
+		gitClient,
+		envVarsProvider,
+		db,
+		s3Bucket,
+		awsAccessKey,
+		awsSecretAccessKey,
+		projectPath,
+		configFilePath,
+		dbEnvironment,
+		isCompose,
+		komposeObject,
+		environment,
+		dockerhubPullSecretName,
+	}
+}
+
+func ComputeRepoAndBuildPath(projectPath, configFilePath, buildPath, defaultRepo string) (string, string) {
+	projectPath = filepath.Clean(projectPath)
+	fullBuildPath := filepath.Clean(path.Join(path.Dir(configFilePath), buildPath))
 
 	projectPathParts := strings.Split(projectPath, string(filepath.Separator))
 	buildPathParts := strings.Split(fullBuildPath, string(filepath.Separator))
@@ -59,44 +135,102 @@ func (c *gitCompose) computeRepoAndBuildPath(buildPath string, defaultRepo strin
 	return defaultRepo, buildPath
 }
 
-func (c *gitCompose) buildImages(
+func (b *builder) BuildImagesFromGit(
 	ctx context.Context,
 	namespace string,
+	gitOptions GitOptions,
 ) (*BuildImagesResult, error) {
-	c.dbEnvironment.Status = database.EnvBuilding
-	err := c.db.Save(c.dbEnvironment).Error
+	b.dbEnvironment.Status = database.EnvBuilding
+	err := b.db.Save(b.dbEnvironment).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to set env status to building")
 	}
 
-	if c.isCompose {
-		return c.buildImagesWithKaniko(ctx, namespace)
+	if b.isCompose {
+		return b.buildImagesWithKanikoFromGit(ctx, namespace, gitOptions)
 	} else {
-		return c.buildImagesWithBuildpacks(ctx, namespace)
+		return b.buildImagesWithBuildpacksFromGit(ctx, namespace, gitOptions)
 	}
 }
 
-func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace string) (*BuildImagesResult, error) {
+func (b *builder) BuildImagesFromTar(
+	ctx context.Context,
+	namespace string,
+	tarpath string,
+) (*BuildImagesResult, error) {
+	b.dbEnvironment.Status = database.EnvBuilding
+	err := b.db.Save(b.dbEnvironment).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to set env status to building")
+	}
+
+	if !b.isCompose {
+		return nil, errors.New("buildpacks are not supported when building from tar")
+	}
+
+	return b.buildImagesWithKanikoFromTar(ctx, namespace, tarpath)
+}
+
+func (b *builder) buildImagesWithKanikoFromTar(
+	ctx context.Context,
+	namespace string,
+	tarpath string,
+) (*BuildImagesResult, error) {
+	jobs := []*batchv1.Job{}
+	for k, service := range b.komposeObject.ServiceConfigs {
+		if service.Build == "" && service.Dockerfile == "" {
+			continue
+		}
+
+		_, buildPath := ComputeRepoAndBuildPath(b.projectPath, b.configFilePath, service.Build, "")
+
+		spec := b.makeJobSpec(
+			b.environment.Services[k].ID,
+			k,
+			service,
+			buildPath,
+			[]envvars.EnvVar{},
+			GitOptions{},
+			fmt.Sprintf("s3://%s/%s/archive.tar.gz", b.s3Bucket, namespace),
+		)
+		job, err := b.clusterClient.CreateJob(ctx, spec)
+		if err != nil {
+			return nil, errors.Wrapf(err, "fail to create build job for service %s", k)
+		}
+		jobs = append(jobs, job)
+	}
+
+	jobCtx, cancelFn := context.WithTimeout(ctx, time.Hour)
+	defer cancelFn()
+	result, err := b.clusterClient.WaitJobs(jobCtx, jobs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "fail to wait for build jobs to complete")
+	}
+
+	return &BuildImagesResult{result.Failed}, nil
+}
+
+func (b *builder) buildImagesWithBuildpacksFromGit(ctx context.Context, namespace string, gitOptions GitOptions) (*BuildImagesResult, error) {
 	cloneTokenSecrets := make(map[string]*string)
 	builds := make([]*kpackBuild.Build, 0)
 
-	for serviceName, service := range c.environment.Services {
+	for serviceName, service := range b.environment.Services {
 		if service.Build == "" {
 			continue
 		}
 
-		repo, buildPath := c.computeRepoAndBuildPath(service.Build, c.repo)
-		if repo == c.repo {
+		repo, buildPath := ComputeRepoAndBuildPath(b.projectPath, b.configFilePath, service.Build, gitOptions.Repo)
+		if repo == gitOptions.Repo {
 			buildPath, _ = filepath.Rel("/", path.Clean(path.Join("/", ".ergomake", buildPath)))
 		} else {
-			buildPath, _ = filepath.Rel(path.Join("/", repo), path.Clean(path.Join("/", c.repo, ".ergomake", buildPath)))
+			buildPath, _ = filepath.Rel(path.Join("/", repo), path.Clean(path.Join("/", gitOptions.Repo, ".ergomake", buildPath)))
 		}
 
 		cloneTokenSecretName, ok := cloneTokenSecrets[repo]
-		if !ok && !c.isPublic {
-			cloneToken, err := c.gitClient.GetCloneToken(ctx, c.branchOwner, repo)
+		if !ok && !gitOptions.IsPublic {
+			cloneToken, err := b.gitClient.GetCloneToken(ctx, gitOptions.BranchOwner, repo)
 			if err != nil {
-				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", c.branchOwner, repo)
+				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", gitOptions.BranchOwner, repo)
 			}
 
 			cloneTokenSecret := &corev1.Secret{
@@ -114,7 +248,7 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 				Type: "kubernetes.io/basic-auth",
 			}
 
-			err = c.clusterClient.CreateSecret(ctx, cloneTokenSecret)
+			err = b.clusterClient.CreateSecret(ctx, cloneTokenSecret)
 			if err != nil {
 				return nil, errors.Wrap(err, "fail to add github token secret into cluster")
 			}
@@ -123,15 +257,15 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 			cloneTokenSecrets[repo] = cloneTokenSecretName
 		}
 
-		branch := c.branch
-		branchExists, err := c.gitClient.DoesBranchExist(ctx, c.owner, repo, branch, c.branchOwner)
+		branch := gitOptions.Branch
+		branchExists, err := b.gitClient.DoesBranchExist(ctx, gitOptions.Owner, repo, branch, gitOptions.BranchOwner)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, c.branchOwner, repo)
+			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, gitOptions.BranchOwner, repo)
 		}
 		if !branchExists {
-			defaultBranch, err := c.gitClient.GetDefaultBranch(ctx, c.owner, repo, c.branchOwner)
+			defaultBranch, err := b.gitClient.GetDefaultBranch(ctx, gitOptions.Owner, repo, gitOptions.BranchOwner)
 			if err != nil {
-				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", c.branchOwner, repo)
+				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", gitOptions.BranchOwner, repo)
 			}
 			branch = defaultBranch
 		}
@@ -148,12 +282,12 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 			svcAcc.Secrets = append(svcAcc.Secrets, corev1.ObjectReference{Name: *cloneTokenSecretName})
 		}
 
-		err = c.clusterClient.CreateServiceAccount(ctx, svcAcc)
+		err = b.clusterClient.CreateServiceAccount(ctx, svcAcc)
 		if err != nil {
 			return nil, errors.Wrapf(err, "fail to create service account to build service %s", service.ID)
 		}
 
-		vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, repo, branch)
+		vars, err := b.envVarsProvider.ListByRepoBranch(ctx, gitOptions.Owner, repo, branch)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to list env vars by repo")
 		}
@@ -177,7 +311,7 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 			envs = append(envs, corev1.EnvVar{Name: k, Value: v})
 		}
 
-		labels := c.getLabels(service.ID, serviceName)
+		labels := getLabels(service.ID, serviceName, gitOptions)
 		build := &kpackBuild.Build{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Build",
@@ -199,7 +333,7 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 				ServiceAccountName: svcAcc.GetName(),
 				Source: kpackCore.SourceConfig{
 					Git: &kpackCore.Git{
-						URL:      fmt.Sprintf("https://github.com/%s/%s", c.branchOwner, repo),
+						URL:      fmt.Sprintf("https://github.com/%s/%s", gitOptions.BranchOwner, repo),
 						Revision: branch,
 					},
 					SubPath: buildPath,
@@ -223,7 +357,7 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 		builds = append(builds, build)
 	}
 
-	err := c.clusterClient.ApplyKPackBuilds(ctx, builds)
+	err := b.clusterClient.ApplyKPackBuilds(ctx, builds)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail to apply kpack build")
 	}
@@ -231,25 +365,25 @@ func (c *gitCompose) buildImagesWithBuildpacks(ctx context.Context, namespace st
 	return &BuildImagesResult{}, nil
 }
 
-func (c *gitCompose) buildImagesWithKaniko(ctx context.Context, namespace string) (*BuildImagesResult, error) {
+func (b *builder) buildImagesWithKanikoFromGit(ctx context.Context, namespace string, gitOptions GitOptions) (*BuildImagesResult, error) {
 	cloneTokenSecrets := make(map[string]*string)
 	jobs := []*batchv1.Job{}
-	for k, service := range c.komposeObject.ServiceConfigs {
+	for k, service := range b.komposeObject.ServiceConfigs {
 		if service.Build == "" && service.Dockerfile == "" {
 			continue
 		}
 
-		repo, buildPath := c.computeRepoAndBuildPath(service.Build, c.repo)
+		repo, buildPath := ComputeRepoAndBuildPath(b.projectPath, b.configFilePath, service.Build, gitOptions.Repo)
 
 		cloneTokenSecretName, ok := cloneTokenSecrets[repo]
-		if !ok && !c.isPublic {
-			cloneToken, err := c.gitClient.GetCloneToken(ctx, c.branchOwner, repo)
+		if !ok && !gitOptions.IsPublic {
+			cloneToken, err := b.gitClient.GetCloneToken(ctx, gitOptions.BranchOwner, repo)
 			if err != nil {
-				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", c.branchOwner, repo)
+				return nil, errors.Wrapf(err, "fail to get clone token for %s/%s", gitOptions.BranchOwner, repo)
 			}
 
 			cloneTokenSecret := makeCloneTokenSecret(namespace, repo, cloneToken)
-			err = c.clusterClient.CreateSecret(ctx, cloneTokenSecret)
+			err = b.clusterClient.CreateSecret(ctx, cloneTokenSecret)
 			if err != nil {
 				return nil, errors.Wrap(err, "fail to add github token secret into cluster")
 			}
@@ -258,30 +392,38 @@ func (c *gitCompose) buildImagesWithKaniko(ctx context.Context, namespace string
 			cloneTokenSecrets[repo] = cloneTokenSecretName
 		}
 
-		branch := c.branch
-		branchExists, err := c.gitClient.DoesBranchExist(ctx, c.owner, repo, branch, c.branchOwner)
+		branch := gitOptions.Branch
+		branchExists, err := b.gitClient.DoesBranchExist(ctx, gitOptions.Owner, repo, branch, gitOptions.BranchOwner)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, c.branchOwner, repo)
+			return nil, errors.Wrapf(err, "fail to check if branch %s for repo %s/%s exists", branch, gitOptions.BranchOwner, repo)
 		}
 		if !branchExists {
-			defaultBranch, err := c.gitClient.GetDefaultBranch(ctx, c.owner, repo, c.branchOwner)
+			defaultBranch, err := b.gitClient.GetDefaultBranch(ctx, gitOptions.Owner, repo, gitOptions.BranchOwner)
 			if err != nil {
-				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", c.branchOwner, repo)
+				return nil, errors.Wrapf(err, "fail to get default branch for repo %s/%s", gitOptions.BranchOwner, repo)
 			}
 			branch = defaultBranch
 		}
 
-		vars, err := c.envVarsProvider.ListByRepoBranch(ctx, c.owner, repo, branch)
+		vars, err := b.envVarsProvider.ListByRepoBranch(ctx, gitOptions.Owner, repo, branch)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to list env vars by repo")
 		}
 
-		spec := c.makeJobSpec(c.environment.Services[k].ID, k, service, buildPath, vars)
+		spec := b.makeJobSpec(
+			b.environment.Services[k].ID,
+			k,
+			service,
+			buildPath,
+			vars,
+			gitOptions,
+			"dir:///workspace",
+		)
 		spec.Spec.Template.Spec.InitContainers = []corev1.Container{
-			c.makeInitContainer(spec, c.branchOwner, repo, branch, cloneTokenSecretName),
+			b.makeInitContainer(spec, gitOptions.BranchOwner, repo, branch, cloneTokenSecretName),
 		}
 
-		job, err := c.clusterClient.CreateJob(ctx, spec)
+		job, err := b.clusterClient.CreateJob(ctx, spec)
 		if err != nil {
 			return nil, errors.Wrapf(err, "fail to create build job for service %s", k)
 		}
@@ -290,7 +432,7 @@ func (c *gitCompose) buildImagesWithKaniko(ctx context.Context, namespace string
 
 	jobCtx, cancelFn := context.WithTimeout(ctx, time.Hour)
 	defer cancelFn()
-	result, err := c.clusterClient.WaitJobs(jobCtx, jobs)
+	result, err := b.clusterClient.WaitJobs(jobCtx, jobs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "fail to wait for build jobs to complete")
 	}
@@ -310,7 +452,15 @@ func makeCloneTokenSecret(namespace, repo, token string) *corev1.Secret {
 	}
 }
 
-func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service kobject.ServiceConfig, buildPath string, vars []envvars.EnvVar) *batchv1.Job {
+func (b *builder) makeJobSpec(
+	serviceID string,
+	serviceName string,
+	service kobject.ServiceConfig,
+	buildPath string,
+	vars []envvars.EnvVar,
+	gitOptions GitOptions,
+	context string,
+) *batchv1.Job {
 
 	buildArgsSet := make(map[string]struct{})
 
@@ -333,7 +483,7 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 	}
 
 	args := append([]string{
-		"--context=dir:///workspace",
+		fmt.Sprintf("--context=%s", context),
 		fmt.Sprintf("--dockerfile=%s", service.Dockerfile),
 		fmt.Sprintf("--context-sub-path=%s", buildPath),
 		"--destination=" + service.Image,
@@ -347,7 +497,7 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 		args = append(args, fmt.Sprintf("--insecure-registry=%s", insecureRegistry))
 	}
 
-	labels := c.getLabels(serviceID, serviceName)
+	labels := getLabels(serviceID, serviceName, gitOptions)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceID,
@@ -366,7 +516,7 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 					Annotations: labels,
 				},
 				Spec: corev1.PodSpec{
-					ImagePullSecrets: []corev1.LocalObjectReference{{Name: c.dockerhubPullSecretName}},
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: b.dockerhubPullSecretName}},
 					Containers: []corev1.Container{
 						{
 							Name:  serviceID,
@@ -385,6 +535,20 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 								},
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("7Gi"),
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "AWS_REGION",
+									Value: "us-east-1",
+								},
+								{
+									Name:  "AWS_ACCESS_KEY_ID",
+									Value: "nop",
+								},
+								{
+									Name:  "AWS_SECRET_ACCESS_KEY",
+									Value: "nop",
 								},
 							},
 						},
@@ -423,19 +587,7 @@ func (c *gitCompose) makeJobSpec(serviceID string, serviceName string, service k
 	return job
 }
 
-func (c *gitCompose) getLabels(serviceID, serviceName string) map[string]string {
-	return map[string]string{
-		"app":                              serviceID,
-		"preview.ergomake.dev/id":          serviceID,
-		"preview.ergomake.dev/service":     serviceName,
-		"preview.ergomake.dev/owner":       c.owner,
-		"preview.ergomake.dev/branchOwner": c.branchOwner,
-		"preview.ergomake.dev/repo":        c.repo,
-		"preview.ergomake.dev/sha":         c.sha,
-	}
-}
-
-func (c *gitCompose) makeInitContainer(
+func (b *builder) makeInitContainer(
 	jobSpec *batchv1.Job,
 	githubOwner string,
 	githubRepo string,
@@ -445,8 +597,8 @@ func (c *gitCompose) makeInitContainer(
 	cmd := append([]string{
 		"git",
 		"clone",
-		c.gitClient.GetCloneUrl(),
-	}, c.gitClient.GetCloneParams()...)
+		b.gitClient.GetCloneUrl(),
+	}, b.gitClient.GetCloneParams()...)
 
 	cmd = append(cmd, "/workspace")
 
@@ -513,6 +665,18 @@ func appendUserlandCreds(job *batchv1.Job) {
 	}
 
 	job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, dockerConfigVolume)
+}
+
+func getLabels(serviceID, serviceName string, gitOptions GitOptions) map[string]string {
+	return map[string]string{
+		"app":                              serviceID,
+		"preview.ergomake.dev/id":          serviceID,
+		"preview.ergomake.dev/service":     serviceName,
+		"preview.ergomake.dev/owner":       gitOptions.Owner,
+		"preview.ergomake.dev/BranchOwner": gitOptions.BranchOwner,
+		"preview.ergomake.dev/repo":        gitOptions.Repo,
+		"preview.ergomake.dev/sha":         gitOptions.SHA,
+	}
 }
 
 func int32Ptr(i int32) *int32 {

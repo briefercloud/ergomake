@@ -14,11 +14,8 @@ func TestGitCompose_validateProjectComposeNotFound(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "validate_project_test")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
-	gc := &gitCompose{
-		projectPath: tmpDir,
-	}
 
-	vErr, err := gc.validateProject()
+	vErr, err := Validate(tmpDir)
 	require.NoError(t, err)
 
 	assert.Equal(t, &projectValidationErrorComposeNotFound, vErr)
@@ -47,11 +44,7 @@ services:
 			)
 			require.NoError(t, err)
 
-			gc := &gitCompose{
-				projectPath: tmpDir,
-			}
-
-			vErr, err := gc.validateProject()
+			vErr, err := Validate(tmpDir)
 			require.NoError(t, err)
 
 			assert.Nil(t, vErr)
@@ -80,14 +73,11 @@ services:
 	)
 	require.NoError(t, err)
 
-	gc := &gitCompose{
-		projectPath: tmpDir,
-	}
-
-	vErr, err := gc.validateProject()
+	vErr, err := Validate(tmpDir)
 	require.NoError(t, err)
 
-	assert.Equal(t, "invalid-compose", vErr.T)
+	require.NotNil(t, vErr.ProjectValidationError)
+	assert.Equal(t, "invalid-compose", vErr.ProjectValidationError.T)
 }
 
 func TestGitCompose_validateProjectInvalidCompose(t *testing.T) {
@@ -143,14 +133,11 @@ services:
 			)
 			require.NoError(t, err)
 
-			gc := &gitCompose{
-				projectPath: tmpDir,
-			}
-
-			vErr, err := gc.validateProject()
+			vErr, err := Validate(tmpDir)
 			require.NoError(t, err)
+			require.NotNil(t, vErr.ProjectValidationError)
 
-			assert.Equal(t, "invalid-compose", vErr.T)
+			assert.Equal(t, "invalid-compose", vErr.ProjectValidationError.T)
 		})
 	}
 }
@@ -187,12 +174,8 @@ services:
 	)
 	require.NoError(t, err)
 
-	gc := &gitCompose{
-		projectPath: dir,
-	}
-
-	vErr, err := gc.validateProject()
+	vErr, err := Validate(tmpDir)
 	require.NoError(t, err)
 
-	assert.Nil(t, vErr)
+	assert.Nil(t, vErr.ProjectValidationError)
 }

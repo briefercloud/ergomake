@@ -88,6 +88,9 @@ func main() {
 		envVarsProvider,
 		privRegistryProvider,
 		environmentsProvider,
+		cfg.S3Bucket,
+		cfg.AWSAccessKeyID,
+		cfg.AWSSecretAccessKey,
 		cfg.DockerhubPullSecretName,
 		cfg.FrontendURL,
 	)

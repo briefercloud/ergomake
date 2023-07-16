@@ -1,4 +1,4 @@
-package transformer
+package git
 
 import (
 	"context"
@@ -26,6 +26,8 @@ import (
 	"github.com/ergomake/ergomake/internal/cluster"
 	"github.com/ergomake/ergomake/internal/database"
 	"github.com/ergomake/ergomake/internal/privregistry"
+	"github.com/ergomake/ergomake/internal/transformer"
+	"github.com/ergomake/ergomake/internal/transformer/builder"
 	clusterMock "github.com/ergomake/ergomake/mocks/cluster"
 	envvarsMocks "github.com/ergomake/ergomake/mocks/envvars"
 	gitMock "github.com/ergomake/ergomake/mocks/git"
@@ -55,7 +57,11 @@ func TestGitCompose_Prepare(t *testing.T) {
 					clusterClient, gitClient, db,
 					envvarsMocks.NewEnvVarsProvider(t),
 					privregistryMock.NewPrivRegistryProvider(t),
-					"owner", "owner", "repo", "branch", "sha", pointer.Int(1337), "author", true, "hub-secret",
+					"s3bucket",
+					"awskey",
+					"awssecret",
+					builder.GitOptions{Owner: "owner", BranchOwner: "owner", Repo: "repo", Branch: "branch", SHA: "sha", PrNumber: pointer.Int(1337), Author: "author", IsPublic: true},
+					"hub-secret",
 				)
 			},
 		},
@@ -133,7 +139,11 @@ func TestGitCompose_Transform(t *testing.T) {
 				gc := NewGitCompose(
 					clusterClient, gitClient, db, envVarsProvider,
 					privRegistryProvider,
-					"owner", "owner", "repo", "branch", "sha", pointer.Int(1337), "author", false, "hub-secret",
+					"s3bucket",
+					"awskey",
+					"awssecret",
+					builder.GitOptions{Owner: "owner", BranchOwner: "owner", Repo: "repo", Branch: "branch", SHA: "sha", PrNumber: pointer.Int(1337), Author: "author", IsPublic: false},
+					"hub-secret",
 				)
 				gc.komposeObject = &kobject.KomposeObject{
 					ServiceConfigs: map[string]kobject.ServiceConfig{
@@ -141,7 +151,7 @@ func TestGitCompose_Transform(t *testing.T) {
 						"dontbuild": {Image: "mongo"},
 					},
 				}
-				gc.environment = &Environment{}
+				gc.environment = &transformer.Environment{}
 				gc.dbEnvironment = dbEnv
 
 				return gc
@@ -207,7 +217,11 @@ services:
 					clusterClient, gitClient, &database.DB{},
 					envvarsMocks.NewEnvVarsProvider(t),
 					privregistryMock.NewPrivRegistryProvider(t),
-					"owner", "owner", repo, "branch", "sha", pointer.Int(1337), "author", true, "hub-secret",
+					"s3bucket",
+					"awskey",
+					"awssecret",
+					builder.GitOptions{Owner: "owner", BranchOwner: "owner", Repo: repo, Branch: "branch", SHA: "sha", PrNumber: pointer.Int(1337), Author: "author", IsPublic: true},
+					"hub-secret",
 				)
 			},
 			namespace: "delete-repo",
@@ -215,7 +229,7 @@ services:
 				c.cleanup()
 
 				tmpDir := os.TempDir()
-				prefix := path.Join(fmt.Sprintf("ergomake-%s-%s-%s", c.owner, repo, tc.namespace), repo)
+				prefix := path.Join(fmt.Sprintf("ergomake-%s-%s-%s", c.gitOptions.Owner, repo, tc.namespace), repo)
 				files, err := ioutil.ReadDir(tmpDir)
 				require.NoError(t, err)
 
@@ -255,7 +269,7 @@ func TestGitCompose_makeEnvironmentFromServices(t *testing.T) {
 		name       string
 		services   map[string]kobject.ServiceConfig
 		rawCompose string
-		want       map[string]EnvironmentService
+		want       map[string]transformer.EnvironmentService
 	}{
 		{
 			name: "updates service URL and image",
@@ -291,7 +305,7 @@ services:
     ports:
       - "8080:8080"
 `,
-			want: map[string]EnvironmentService{
+			want: map[string]transformer.EnvironmentService{
 				"service1": {
 					Build: "path/to/build",
 					Image: "",
@@ -320,7 +334,11 @@ services:
 				clusterClient, gitClient, &database.DB{},
 				envvarsMocks.NewEnvVarsProvider(t),
 				privregistryMock.NewPrivRegistryProvider(t),
-				"owner", "owner", "repo", "branch", "sha", pointer.Int(1337), "author", true, "hub-secret",
+				"s3bucket",
+				"awskey",
+				"awssecret",
+				builder.GitOptions{Owner: "owner", BranchOwner: "owner", Repo: "repo", Branch: "branch", SHA: "sha", PrNumber: pointer.Int(1337), Author: "author", IsPublic: true},
+				"hub-secret",
 			)
 			env := gc.makeEnvironmentFromKObjectServices(tc.services, tc.rawCompose)
 
@@ -421,9 +439,11 @@ func TestGitCompose_getUrl(t *testing.T) {
 	t.Parallel()
 
 	c := &gitCompose{
-		owner:    "myowner",
-		repo:     "myrepo",
-		prNumber: pointer.Int(123),
+		gitOptions: builder.GitOptions{
+			Owner:    "myowner",
+			Repo:     "myrepo",
+			PrNumber: pointer.Int(123),
+		},
 	}
 
 	tt := []struct {

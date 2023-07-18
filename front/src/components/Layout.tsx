@@ -15,6 +15,7 @@ import { Owner, useOwners } from '../hooks/useOwners'
 import { Profile } from '../hooks/useProfile'
 import { useTheme } from '../hooks/useTheme'
 import AuthAlert from './AuthAlert'
+import PermissionsModal from './PermissionsModal'
 
 const navigation = [
   { name: 'Repositories', href: '#', icon: FolderIcon, current: true },
@@ -36,6 +37,8 @@ type DesktopSidebarProps = {
 }
 
 const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false)
+
   const navigate = useNavigate()
   const onChangeOwner = useCallback(
     (ownerName: string) => {
@@ -46,6 +49,11 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
 
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+      <PermissionsModal
+        isOpen={isPermissionsModalOpen}
+        onClose={() => setIsPermissionsModalOpen(false)}
+        installationUrl={installationUrl}
+      />
       <div
         className={classNames(
           sidebarColor,
@@ -111,10 +119,13 @@ const DesktopSidebar = ({ owners, currentOwner }: DesktopSidebarProps) => {
                 ))}
 
                 <li className="group text-gray-400 dark:text-gray-500 dark:hover:text-primary-300 flex gap-x-3 rounded-md py-1 text-sm leading-6 font-semibold hover:text-primary-400 hover:cursor-pointer">
-                  <a href={installationUrl} className="flex gap-x-3">
+                  <button
+                    onClick={() => setIsPermissionsModalOpen(true)}
+                    className="flex gap-x-3"
+                  >
                     <PlusCircleIcon className="h-6 w-6" aria-hidden="true" />
                     Add organization
-                  </a>
+                  </button>
                 </li>
               </ul>
             </li>

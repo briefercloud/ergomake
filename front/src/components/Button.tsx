@@ -4,9 +4,12 @@ import Loading from './Loading'
 
 interface Props extends React.ButtonHTMLAttributes<unknown> {
   loading?: boolean
+  tag?: 'button' | 'a'
+  href?: string
 }
+
 function Button(props: Props) {
-  const { loading, className, children, ...buttonProps } = props
+  const { href, loading, className, children, ...buttonProps } = props
   const cn = classNames(
     className,
     'rounded-md',
@@ -31,11 +34,13 @@ function Button(props: Props) {
     }
   )
 
+  const Tag = props.tag ?? 'button'
+
   return (
-    <button {...buttonProps} className={cn}>
+    <Tag {...buttonProps} className={cn} href={href}>
       {loading && <Loading className="mr-1" size={12} />}
       {children}
-    </button>
+    </Tag>
   )
 }
 

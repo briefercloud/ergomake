@@ -1,9 +1,9 @@
 import ArrowPathIcon from '@heroicons/react/24/solid/ArrowPathIcon'
-import Logo from '../components/Logo'
 import * as dfns from 'date-fns'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 
+import Logo from '../components/Logo'
 import { isLoading, isSuccess } from '../hooks/useHTTPRequest'
 import { usePublicEnvironment } from '../hooks/usePublicEnvironment'
 

@@ -191,7 +191,7 @@ export const useHTTPRequest = <T>(url: string): UseHTTPRequest<T> => {
 export type HTTPMutationResponse<T> = HTTPResponse<T> | { _tag: 'pristine' }
 export type UseHTTPMutation<P, R = P> = [
   HTTPMutationResponse<R>,
-  (data: P) => void
+  (data: P) => void,
 ]
 export const useHTTPMutation = <P, R = P>(
   url: string

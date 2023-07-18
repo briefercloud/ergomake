@@ -31,14 +31,25 @@ func NewDBUsersService(db *database.DB) *dbUsersService {
 func (up *dbUsersService) Save(ctx context.Context, user User) error {
 	var dbUser databaseUser
 
-	err := up.db.Table("users").
-		Find(
-			&dbUser,
-			"provider = ? AND (email = ? OR username = ?)",
-			user.Provider,
-			user.Email,
-			user.Username,
-		).Error
+	var err error
+	if user.Email == "" {
+		err = up.db.Table("users").
+			Find(
+				&dbUser,
+				"provider = ? AND username = ?",
+				user.Provider,
+				user.Username,
+			).Error
+	} else {
+		err = up.db.Table("users").
+			Find(
+				&dbUser,
+				"provider = ? AND (email = ? OR username = ?)",
+				user.Provider,
+				user.Email,
+				user.Username,
+			).Error
+	}
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrap(err, "fail to check for existing user in db")

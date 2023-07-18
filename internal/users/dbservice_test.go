@@ -153,6 +153,31 @@ func TestDBUsersService_Save(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "can have multiple users with empty email",
+			setup: []User{{
+				Email:    "",
+				Username: "username1",
+				Provider: "github",
+			}},
+			arg: User{
+				Email:    "",
+				Username: "username2",
+				Provider: "github",
+			},
+			state: []User{
+				{
+					Email:    "",
+					Username: "username1",
+					Provider: "github",
+				},
+				{
+					Email:    "",
+					Username: "username2",
+					Provider: "github",
+				},
+			},
+		},
 	}
 
 	for _, tc := range tt {

@@ -138,7 +138,7 @@ function EnvironmentPage({ profile }: Props) {
   const [stateServiceIndex, setCurrentServiceIndex] = useState(0)
   const currentServiceIndex = Math.min(
     stateServiceIndex,
-    selectOptions.length - 1
+    Math.max(selectOptions.length - 1, 0)
   )
   const logs = useMemo(
     () =>

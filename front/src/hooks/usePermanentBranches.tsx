@@ -14,7 +14,7 @@ export type PermanentBranch = {
 type Payload = { branches: string[] }
 type UsePermanentBranches = [
   HTTPResponse<PermanentBranch[]>,
-  (payload: Payload) => void
+  (payload: Payload) => void,
 ]
 
 export const usePermanentBranches = (

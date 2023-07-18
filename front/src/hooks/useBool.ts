@@ -6,7 +6,7 @@ type UseBool = [
     setTrue: () => void
     setFalse: () => void
     toggle: () => void
-  }
+  },
 ]
 const useBool = (initial: boolean): UseBool => {
   const [state, setState] = useState(initial)

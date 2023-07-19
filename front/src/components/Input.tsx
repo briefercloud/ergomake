@@ -6,6 +6,8 @@ type InputProps = {
   value: string
   placeholder: string
   disabled?: boolean
+  type?: React.HTMLInputTypeAttribute
+  onPaste?: React.ClipboardEventHandler<HTMLInputElement>
 }
 
 const Input = ({
@@ -14,11 +16,13 @@ const Input = ({
   value,
   placeholder,
   disabled,
+  type,
+  onPaste,
 }: InputProps) => {
   return (
     <div className="pr-4">
       <input
-        type="text"
+        type={type ?? 'text'}
         name={label}
         value={value}
         onChange={(e) => {
@@ -30,6 +34,7 @@ const Input = ({
           { 'bg-gray-100 dark:bg-neutral-700': disabled }
         )}
         disabled={disabled}
+        onPaste={onPaste}
       />
     </div>
   )

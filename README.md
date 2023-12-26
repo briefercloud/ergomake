@@ -1,3 +1,5 @@
+<p align="center"><strong>This project is not actively maintained anymore. Ergomake is now <a href="https://briefer.cloud">Briefer</a>.</strong></p>
+
 <p align="center">
   <a href="https://ergomake.dev">
   <picture>
